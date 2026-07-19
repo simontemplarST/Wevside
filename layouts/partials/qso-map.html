@@ -40,11 +40,11 @@
 
     <!-- worked stations, largest first so busy spots sit behind -->
     <g class="qso-dots">
-      {{ range $m.points }}
-        {{ $r := add 1.3 (mul (math.Sqrt .n) 0.62) }}
+      {{ range $i, $p := $m.points }}
+        {{ $r := add 1.3 (mul (math.Sqrt $p.n) 0.62) }}
         {{ $r := cond (gt $r 8.0) 8.0 $r }}
-        <circle cx="{{ .x }}" cy="{{ .y }}" r="{{ $r }}" data-band="{{ .band }}">
-          <title>{{ .call }} — {{ .n }} QSO{{ if gt .n 1 }}s{{ end }}{{ with .bands }} · {{ delimit . ", " }}{{ end }}</title>
+        <circle cx="{{ $p.x }}" cy="{{ $p.y }}" r="{{ $r }}" data-band="{{ $p.band }}" data-i="{{ $i }}">
+          <title>{{ $p.call }} — {{ $p.n }} QSO{{ if gt $p.n 1 }}s{{ end }}{{ with $p.bands }} · {{ delimit . ", " }}{{ end }} · click for QSL</title>
         </circle>
       {{ end }}
     </g>
@@ -114,6 +114,8 @@
   var V = {w:{{ $w }},h:{{ $h }},latTop:{{ $m.view.latTop }},latBot:{{ $m.view.latBot }}};
   var HOME = {{ with $m.home }}[{{ .la }},{{ .lo }}]{{ else }}null{{ end }};
   var PTS = [{{ range $i, $p := $m.points }}{{ if $i }},{{ end }}[{{ $p.la }},{{ $p.lo }}]{{ end }}];
+  // per-point QSL data (indexed the same as the dots' data-i)
+  var QSL = [{{ range $i, $p := $m.points }}{{ if $i }},{{ end }}{c:{{ $p.call }},n:{{ $p.n }},bd:[{{ range $j, $b := $p.bands }}{{ if $j }},{{ end }}{{ $b }}{{ end }}]{{ with $p.lead }},l:{call:{{ .call }},date:{{ .date }},time:{{ .time }},band:{{ .band }},mode:{{ .mode }},rst_s:{{ .rst_s }},rst_r:{{ .rst_r }},grid:{{ .grid }},qth:{{ .qth }}}{{ end }}}{{ end }}];
 
   function proj(lat, lon) {
     lon = ((lon + 180) % 360 + 360) % 360 - 180;
@@ -199,14 +201,17 @@
     zoomAt(p[0], p[1], e.deltaY < 0 ? 0.83 : 1 / 0.83);
   }, { passive: false });
 
-  var drag = null;
+  var drag = null, down = null, dragged = false;
   svg.addEventListener("pointerdown", function (e) {
     drag = { x: e.clientX, y: e.clientY };
+    down = { x: e.clientX, y: e.clientY };
+    dragged = false;
     svg.setPointerCapture(e.pointerId);
     fig.classList.add("panning");
   });
   svg.addEventListener("pointermove", function (e) {
     if (!drag) return;
+    if (Math.hypot(e.clientX - down.x, e.clientY - down.y) > 4) dragged = true;
     var r = svg.getBoundingClientRect();
     vb.x -= (e.clientX - drag.x) * vb.w / r.width;
     vb.y -= (e.clientY - drag.y) * vb.h / r.height;
@@ -221,6 +226,20 @@
   }
   svg.addEventListener("pointerup", endDrag);
   svg.addEventListener("pointercancel", endDrag);
+
+  // click a dot (not a drag) -> QSL card
+  svg.addEventListener("click", function (e) {
+    if (dragged) { dragged = false; return; }
+    var c = e.target.closest("circle[data-i]");
+    if (!c || !window.showQSL) return;
+    var p = QSL[+c.getAttribute("data-i")];
+    if (!p) return;
+    var l = p.l || {};
+    window.showQSL({
+      call: l.call || p.c, date: l.date, time: l.time, band: l.band, mode: l.mode,
+      rst_s: l.rst_s, rst_r: l.rst_r, grid: l.grid, qth: l.qth, n: p.n, bands: p.bd
+    });
+  });
 
   fig.querySelector(".qso-zoom").addEventListener("click", function (e) {
     var z = e.target.getAttribute("data-z");

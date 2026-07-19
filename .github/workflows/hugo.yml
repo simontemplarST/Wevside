@@ -4,6 +4,10 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  # Refresh the live "ON AIR" badge from PSKReporter. 15 min stays well clear
+  # of PSKReporter's 1-query-per-5-min limit.
+  schedule:
+    - cron: "*/15 * * * *"
 
 permissions:
   contents: read
@@ -34,6 +38,13 @@ jobs:
         run: |
           hugo --gc --minify \
             --baseURL "${{ steps.pages.outputs.base_url }}/"
+      - name: Refresh ON AIR status from PSKReporter
+        # Overwrites the seed on-air.json in the built site with live data.
+        # Exit code 1 just means "off air" — never fail the deploy on it.
+        run: |
+          python3 scripts/on-air-light.py --once \
+            -c N0YEP -o ./public/on-air.json \
+            --appcontact "${{ secrets.PSK_CONTACT }}" || true
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:

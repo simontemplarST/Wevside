@@ -1,7 +1,15 @@
-baseURL = "https://simontemplarst.github.io/Wevside/"
+baseURL = "https://cameronheard.com"
 languageCode = "en-us"
 title = "N0YEP — Amateur Radio Station"
 enableRobotsTXT = true
+
+# RSS only for /blog/ — disable the default feeds everywhere else.
+# The blog section re-enables RSS via its _index.md front matter.
+[outputs]
+  home = ["HTML"]
+  section = ["HTML"]
+  taxonomy = ["HTML"]
+  term = ["HTML"]
 
 [params]
   callsign = "N0YEP"

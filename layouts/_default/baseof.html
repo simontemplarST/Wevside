@@ -8,6 +8,8 @@
   {{ with resources.Get "css/wireframe.css" | minify | fingerprint }}
     <link rel="stylesheet" href="{{ .RelPermalink }}" integrity="{{ .Data.Integrity }}">
   {{ end }}
+  <link rel="alternate" type="application/rss+xml" title="{{ .Site.Title }} — Blog"
+        href="{{ "blog/index.xml" | absURL }}">
 </head>
 <body>
   <div class="wrap">
@@ -17,5 +19,6 @@
     </main>
     {{ partial "footer.html" . }}
   </div>
+  {{ partial "qsl-card.html" . }}
 </body>
 </html>

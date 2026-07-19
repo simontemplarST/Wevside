@@ -67,6 +67,25 @@ def fmt_date(adif_date: str) -> str:
     return adif_date
 
 
+# Third-party PII that must never reach the public site (log ends up on GitHub).
+_EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
+_URL_RE = re.compile(r"https?://\S+", re.IGNORECASE)
+_PHONE_RE = re.compile(r"\+?\d[\d\s().-]{7,}\d")
+
+
+def scrub(text: str) -> str:
+    """Strip emails, URLs, and phone numbers from operator-entered free text."""
+    if not text:
+        return ""
+    text = _EMAIL_RE.sub("", text)
+    text = _URL_RE.sub("", text)
+    text = _PHONE_RE.sub("", text)
+    # tidy separators left behind (e.g. "ENVIGADO = " -> "ENVIGADO")
+    text = re.sub(r"\s*[=|:/,;-]\s*$", "", text.strip())
+    text = re.sub(r"^\s*[=|:/,;-]\s*", "", text)
+    return re.sub(r"\s{2,}", " ", text).strip()
+
+
 def convert(records: list[dict]) -> list[dict]:
     out = []
     for r in records:
@@ -82,8 +101,8 @@ def convert(records: list[dict]) -> list[dict]:
             "mode": (r.get("MODE", "") or "").upper(),
             "rst_s": r.get("RST_SENT", ""),
             "rst_r": r.get("RST_RCVD", ""),
-            "qth": qth,
-            "note": r.get("COMMENT", "") or r.get("NOTES", ""),
+            "qth": scrub(qth),
+            "note": scrub(r.get("COMMENT", "") or r.get("NOTES", "")),
         })
     # newest first, by date+time
     out.sort(key=lambda q: (q["date"], q["time"]), reverse=True)

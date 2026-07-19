@@ -5,7 +5,7 @@
   <span>
     {{ with .Site.Params.social.qrz }}<a href="{{ . }}">QRZ</a> &middot; {{ end }}
     <a href="{{ "logbook/" | relURL }}">Logbook</a> &middot;
-    <a href="{{ "index.xml" | relURL }}">RSS</a>
+    <a href="{{ "blog/index.xml" | relURL }}">RSS</a>
   </span>
-  <span>&copy; {{ now.Year }} {{ .Site.Params.operator }} &middot; Wireframe build</span>
+  <span>&copy; {{ now.Year }} {{ .Site.Params.operator }}</span>
 </footer>

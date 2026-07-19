@@ -1,0 +1,97 @@
+{{/* Virtual QSL card modal — populated by window.showQSL(data).
+     Included once site-wide from baseof; logbook rows and map points call it. */}}
+<div class="qsl-overlay" id="qsl" hidden>
+  <div class="qsl-card" role="dialog" aria-modal="true" aria-labelledby="qsl-call" tabindex="-1">
+    <button type="button" class="qsl-close" aria-label="Close QSL card">&times;</button>
+
+    <div class="qsl-head">
+      <div class="qsl-de">
+        <span class="qsl-mycall">{{ .Site.Params.callsign }}</span>
+        <span>{{ .Site.Params.operator }} &middot; {{ .Site.Params.qth }}</span>
+      </div>
+      <div class="qsl-stamp">RADIO<br>QSL<br>CARD</div>
+    </div>
+
+    <div class="qsl-to">
+      <span class="qsl-label">Confirming 2-way QSO with</span>
+      <span class="qsl-call" id="qsl-call">&mdash;</span>
+    </div>
+
+    <table class="qsl-details">
+      <tbody>
+        <tr><th>Date</th><td data-f="date"></td><th>UTC</th><td data-f="time"></td></tr>
+        <tr><th>Band</th><td data-f="band"></td><th>Mode</th><td data-f="mode"></td></tr>
+        <tr><th>RST Sent</th><td data-f="rst_s"></td><th>RST Rcvd</th><td data-f="rst_r"></td></tr>
+        <tr data-row="qth"><th>QTH</th><td data-f="qth" colspan="3"></td></tr>
+        <tr data-row="grid"><th>Grid</th><td data-f="grid" colspan="3"></td></tr>
+        <tr data-row="note"><th>Note</th><td data-f="note" colspan="3"></td></tr>
+      </tbody>
+    </table>
+
+    <div class="qsl-summary" id="qsl-summary" hidden></div>
+
+    <div class="qsl-foot">
+      <span>TNX FB QSO &middot; 73</span>
+      <span>QSL via LoTW &middot; QRZ</span>
+    </div>
+  </div>
+</div>
+
+<script>
+window.showQSL = (function () {
+  var overlay = document.getElementById("qsl");
+  if (!overlay) return function () {};
+  var card = overlay.querySelector(".qsl-card");
+  var callEl = document.getElementById("qsl-call");
+  var summary = document.getElementById("qsl-summary");
+  var lastFocus = null;
+
+  function setField(name, val) {
+    var cell = overlay.querySelector('[data-f="' + name + '"]');
+    if (!cell) return;
+    var has = val !== undefined && val !== null && String(val).trim() !== "";
+    cell.textContent = has ? val : "";
+    var row = cell.closest("tr[data-row]");
+    if (row) row.hidden = !has;      // hide optional rows when empty
+  }
+
+  function open(d) {
+    d = d || {};
+    callEl.textContent = d.call || "—";
+    setField("date", d.date);
+    setField("time", d.time ? d.time.replace(/^(\d{2})(\d{2})$/, "$1:$2") + "z" : "");
+    setField("band", d.band);
+    setField("mode", d.mode);
+    setField("rst_s", d.rst_s);
+    setField("rst_r", d.rst_r);
+    setField("qth", d.qth);
+    setField("grid", d.grid);
+    setField("note", d.note);
+    if (d.n && d.n > 1) {
+      summary.hidden = false;
+      summary.textContent = d.n + " QSOs logged from this location" +
+        (d.bands && d.bands.length ? " · " + d.bands.join(", ") : "") + ".";
+    } else {
+      summary.hidden = true;
+    }
+    lastFocus = document.activeElement;
+    overlay.hidden = false;
+    document.body.classList.add("qsl-open");
+    card.focus();
+  }
+
+  function close() {
+    overlay.hidden = true;
+    document.body.classList.remove("qsl-open");
+    if (lastFocus && lastFocus.focus) lastFocus.focus();
+  }
+
+  overlay.addEventListener("click", function (e) {
+    if (e.target === overlay || e.target.closest(".qsl-close")) close();
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && !overlay.hidden) close();
+  });
+  return open;
+})();
+</script>

@@ -25,6 +25,17 @@ from collections import Counter
 CONTINENTS = {"NA": "North America", "SA": "South America", "EU": "Europe",
               "AS": "Asia", "AF": "Africa", "OC": "Oceania", "AN": "Antarctica"}
 
+# Third-party PII must never reach the public site — strip it from free text.
+_PII_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}|https?://\S+")
+
+
+def scrub(text: str) -> str:
+    if not text:
+        return ""
+    text = _PII_RE.sub("", text)
+    text = re.sub(r"\s*[=|:/,;-]\s*$", "", text.strip())
+    return re.sub(r"\s{2,}", " ", text).strip()
+
 # ---- projection --------------------------------------------------------------
 # Equirectangular. Full longitude; latitude trimmed to drop empty polar bands.
 VIEW_W = 1000.0
@@ -192,12 +203,30 @@ def main() -> int:
         b = buckets.setdefault(key, {
             "lat": lat, "lon": lon, "count": 0,
             "call": rec.get("CALL", ""), "bandc": Counter(), "modes": set(),
+            "lead": None, "lead_key": "",
         })
         b["count"] += 1
         if rec.get("BAND"):
             b["bandc"][rec["BAND"].lower()] += 1
         if rec.get("MODE"):
             b["modes"].add(rec["MODE"].upper())
+        # keep the most recent QSO at this location for its QSL card
+        stamp = (rec.get("QSO_DATE", "") + rec.get("TIME_ON", "")).ljust(14)
+        if stamp >= b["lead_key"]:
+            b["lead_key"] = stamp
+            date = rec.get("QSO_DATE", "")
+            b["lead"] = {
+                "call": (rec.get("CALL", "") or "").upper(),
+                "date": f"{date[0:4]}-{date[4:6]}-{date[6:8]}" if len(date) == 8 else date,
+                "time": (rec.get("TIME_ON", "") or "")[:4],
+                "band": (rec.get("BAND", "") or "").lower(),
+                "mode": (rec.get("MODE", "") or "").upper(),
+                "rst_s": rec.get("RST_SENT", ""),
+                "rst_r": rec.get("RST_RCVD", ""),
+                "grid": (rec.get("GRIDSQUARE", "") or "")[:6].upper(),
+                "qth": scrub(rec.get("QTH", "") or rec.get("STATE", "")
+                             or rec.get("COUNTRY", "")),
+            }
 
     # home coordinates
     home_ll = grid_to_latlon(home_grid) if home_grid else None
@@ -211,10 +240,13 @@ def main() -> int:
     for b in buckets.values():
         x, y = project(b["lat"], b["lon"])
         top_band = b["bandc"].most_common(1)[0][0] if b["bandc"] else ""
+        # headline = the most recent QSO here, so tooltip and QSL card agree
+        call = (b["lead"] or {}).get("call") or b["call"]
         points.append({
             "x": x, "y": y, "la": round(b["lat"], 2), "lo": round(b["lon"], 2),
-            "n": b["count"], "call": b["call"], "band": top_band,
+            "n": b["count"], "call": call, "band": top_band,
             "bands": sorted(b["bandc"]), "modes": sorted(b["modes"]),
+            "lead": b["lead"],
         })
     points.sort(key=lambda d: d["n"], reverse=True)
 

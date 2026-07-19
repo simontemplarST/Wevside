@@ -219,6 +219,115 @@ hr { border: 0; border-top: var(--w) dashed var(--line-2); margin: 28px 0; }
 .log tr:nth-child(even) td { background: rgba(255,255,255,.035); }
 .log td.callsign { font-weight: 700; letter-spacing: .05em; }
 
+/* --- virtual QSL card modal ---------------------------------------------- */
+body.qsl-open { overflow: hidden; }
+.qsl-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, .6);
+  backdrop-filter: blur(2px);
+}
+.qsl-overlay[hidden] { display: none; }
+.qsl-card {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  background: var(--panel);
+  border: var(--w) solid var(--ink);
+  box-shadow: 8px 8px 0 rgba(0, 0, 0, .35);
+  padding: 20px;
+  outline: none;
+  animation: qsl-in .12s ease-out;
+}
+@keyframes qsl-in { from { transform: translateY(8px); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .qsl-card { animation: none; } }
+.qsl-close {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  border: 0;
+  background: none;
+  color: var(--ink-soft);
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+.qsl-close:hover { color: var(--ink); }
+.qsl-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  border-bottom: var(--w) solid var(--line);
+  padding-bottom: 12px;
+}
+.qsl-de { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--ink-soft); }
+.qsl-mycall { font-size: 24px; font-weight: 700; letter-spacing: .14em; color: var(--ink); }
+.qsl-stamp {
+  border: 1px solid var(--line-2);
+  padding: 4px 8px;
+  font-size: 9px;
+  letter-spacing: .2em;
+  text-align: center;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+.qsl-to { text-align: center; margin: 16px 0; }
+.qsl-label {
+  display: block;
+  font-size: 11px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-bottom: 4px;
+}
+.qsl-call { font-size: 30px; font-weight: 700; letter-spacing: .12em; }
+.qsl-details { width: 100%; border-collapse: collapse; font-size: 13px; }
+.qsl-details th, .qsl-details td {
+  border: 1px solid var(--line);
+  padding: 6px 9px;
+  text-align: left;
+}
+.qsl-details th {
+  background: var(--hatch);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--ink-soft);
+  white-space: nowrap;
+  width: 1%;
+}
+.qsl-summary {
+  margin-top: 12px;
+  padding: 8px 10px;
+  border: 1px dashed var(--line-2);
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+.qsl-summary[hidden] { display: none; }
+.qsl-foot {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: var(--w) dashed var(--line-2);
+  font-size: 11px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.log td.callsign a, .qso-dots circle { cursor: pointer; }
+.log td.callsign a { color: var(--ink); text-decoration: none; border-bottom: 1px dotted var(--line-2); }
+.log td.callsign a:hover { border-bottom-style: solid; }
+
 /* --- logbook search ------------------------------------------------------ */
 .lb-search {
   display: flex;
@@ -251,6 +360,24 @@ hr { border: 0; border-top: var(--w) dashed var(--line-2); margin: 28px 0; }
 .lb-search .btn { padding: 7px 14px; }
 @media (max-width: 680px) {
   .lb-search input[type="search"] { flex-basis: 100%; }
+}
+.lb-pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 16px 0 4px;
+}
+.lb-pager[hidden] { display: none; }
+.lb-pager .btn { padding: 6px 12px; font-size: 12px; }
+.lb-pager .btn:disabled { opacity: .4; cursor: default; }
+.lb-pager .btn:disabled:hover { background: var(--panel); color: var(--ink); }
+.lb-pager #lb-pageinfo {
+  font-size: 12px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  padding: 0 6px;
 }
 
 /* --- post list ---------------------------------------------------------- */
