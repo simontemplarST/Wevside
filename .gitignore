@@ -1,0 +1,12 @@
+node_modules/
+_site/
+.DS_Store
+# Raw logbook export — contains third-party names/emails; keep out of git
+*.adi
+*.adif
+# Python
+__pycache__/
+# Hugo
+public/
+resources/_gen/
+.hugo_build.lock

@@ -1,0 +1,14 @@
+{
+  "callsign": "N0YEP",
+  "on_air": false,
+  "last_heard": 0,
+  "last_heard_iso": null,
+  "minutes_ago": null,
+  "receiver_count": 0,
+  "bands": [],
+  "modes": [],
+  "best_snr": null,
+  "spots": [],
+  "updated": 0,
+  "note": "Seed file. Run scripts/on-air-light.py to keep this live."
+}

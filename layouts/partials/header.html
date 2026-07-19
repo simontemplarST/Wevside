@@ -1,0 +1,52 @@
+<header class="masthead" data-label="Header">
+  <div>
+    <h1 class="callsign"><a href="{{ "/" | relURL }}">{{ .Site.Params.callsign }}</a></h1>
+    <p class="sub">{{ .Site.Params.operator }} &middot; {{ .Site.Params.qth }} &middot; {{ .Site.Params.licenseClass }}</p>
+  </div>
+  <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+    <span class="onair" id="onair" title="Live status from PSKReporter">
+      <span class="dot"></span><span class="state"></span>
+    </span>
+    <!-- CW: CQ <AR>  ("calling any station") -->
+    <span class="morse">−·−·  −−·−  ·−·−·</span>
+  </div>
+</header>
+
+<script>
+(function () {
+  var el = document.getElementById("onair");
+  if (!el) return;
+  var URL = "{{ "/on-air.json" | relURL }}";
+  // consider the op "on air" if heard within this many minutes
+  var FRESH_MIN = 12;
+  function tick() {
+    fetch(URL + "?t=" + Date.now(), { cache: "no-store" })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (!d) { el.classList.add("is-stale"); return; }
+        var ageMin = (Date.now() / 1000 - (d.last_heard || 0)) / 60;
+        var live = !!d.on_air && d.last_heard && ageMin <= FRESH_MIN;
+        el.classList.toggle("is-live", live);
+        // status file itself gone stale (script stopped) => dim
+        var updatedAge = (Date.now() / 1000 - (d.updated || 0)) / 60;
+        el.classList.toggle("is-stale", updatedAge > 20);
+        if (live) {
+          el.title = "Heard " + Math.round(ageMin) + " min ago by " +
+                     (d.receiver_count || "?") + " station(s) on PSKReporter";
+        } else {
+          el.title = "Not heard on PSKReporter in the last " + FRESH_MIN + " min";
+        }
+      })
+      .catch(function () { el.classList.add("is-stale"); });
+  }
+  tick();
+  setInterval(tick, 30000);
+})();
+</script>
+
+<nav class="nav" data-label="Nav">
+  {{ range .Site.Menus.main }}
+    {{ $active := or ($.IsMenuCurrent "main" .) ($.HasMenuCurrent "main" .) }}
+    <a href="{{ .URL }}"{{ if $active }} aria-current="page"{{ end }}>{{ .Name }}</a>
+  {{ end }}
+</nav>

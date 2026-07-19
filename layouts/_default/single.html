@@ -1,0 +1,31 @@
+{{ define "main" }}
+<article class="box" data-label="{{ .Section | default "Page" }}">
+  <h1>{{ .Title }}</h1>
+
+  {{ if not .Date.IsZero }}
+    <div class="post-meta">
+      {{ .Date.Format "Monday, 02 Jan 2006" }}
+      {{ with .Params.band }} &middot; Band: {{ . }}{{ end }}
+      {{ with .Params.mode }} &middot; Mode: {{ . }}{{ end }}
+      {{ with .ReadingTime }} &middot; {{ . }} min{{ end }}
+    </div>
+  {{ end }}
+
+  <div class="page-body">
+    {{ .Content }}
+  </div>
+
+  {{ $tags := union (.GetTerms "bands") (.GetTerms "modes") }}
+  {{ with $tags }}
+    <hr>
+    <div>
+      {{ range . }}<a class="pill" href="{{ .RelPermalink }}">{{ .LinkTitle }}</a>{{ end }}
+    </div>
+  {{ end }}
+
+  {{ if eq .Section "blog" }}
+    <hr>
+    <a class="btn" href="{{ "/blog" | relURL }}">&larr; Back to Blog</a>
+  {{ end }}
+</article>
+{{ end }}

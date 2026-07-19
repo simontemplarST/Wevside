@@ -1,0 +1,144 @@
+{{ define "main" }}
+<article class="box" data-label="Logbook">
+  <h1>{{ .Title }}</h1>
+  {{ with .Content }}<div class="page-body">{{ . }}</div>{{ end }}
+
+  {{ $log := .Site.Data.log.qsos }}
+  <div class="grid grid--3">
+    <div class="box" data-label="Total QSOs" style="margin:0;text-align:center">
+      <div style="font-size:34px;font-weight:700">{{ len $log }}</div>
+      <div class="post-meta" style="margin:0">logged</div>
+    </div>
+    <div class="box" data-label="Bands" style="margin:0;text-align:center">
+      <div style="font-size:34px;font-weight:700">{{ len (uniq (apply $log "index" "." "band")) }}</div>
+      <div class="post-meta" style="margin:0">worked</div>
+    </div>
+    <div class="box" data-label="Modes" style="margin:0;text-align:center">
+      <div style="font-size:34px;font-weight:700">{{ len (uniq (apply $log "index" "." "mode")) }}</div>
+      <div class="post-meta" style="margin:0">operated</div>
+    </div>
+  </div>
+
+  <div class="box box--dashed lb-search" data-label="Search Log">
+    <input type="search" id="lb-q" placeholder="Callsign, QTH, note, or date (e.g. K4, Japan, 2023-07)…"
+           autocomplete="off" spellcheck="false" aria-label="Search the logbook">
+    <select id="lb-band" aria-label="Filter by band"><option value="">All bands</option></select>
+    <select id="lb-mode" aria-label="Filter by mode"><option value="">All modes</option></select>
+    <button type="button" id="lb-clear" class="btn">Clear</button>
+  </div>
+
+  <div style="overflow-x:auto">
+    <table class="log">
+      <thead>
+        <tr>
+          <th>Date</th><th>UTC</th><th>Call</th><th>Band</th><th>Mode</th>
+          <th>S</th><th>R</th><th>QTH</th><th>Note</th>
+        </tr>
+      </thead>
+      <tbody id="lb-body">
+        {{ range first 100 $log }}
+          <tr>
+            <td>{{ .date }}</td>
+            <td>{{ .time }}</td>
+            <td class="callsign">{{ .callsign }}</td>
+            <td>{{ .band }}</td>
+            <td>{{ .mode }}</td>
+            <td>{{ .rst_s }}</td>
+            <td>{{ .rst_r }}</td>
+            <td>{{ .qth }}</td>
+            <td>{{ .note }}</td>
+          </tr>
+        {{ end }}
+      </tbody>
+    </table>
+  </div>
+  <p class="post-meta" id="lb-note">
+    Showing the {{ cond (gt (len $log) 100) "100 most recent" "" }} of {{ len $log }} logged QSOs.
+    All times UTC. Signal reports: S = sent, R = received. QSL via QRZ / LoTW.
+  </p>
+</article>
+
+<script>
+(function () {
+  // Full log, newest first: [date, utc, call, band, mode, rst_s, rst_r, qth, note]
+  var D = [{{ range $i, $q := $log }}{{ if $i }},{{ end }}[{{ $q.date }},{{ $q.time }},{{ $q.callsign }},{{ $q.band }},{{ $q.mode }},{{ $q.rst_s }},{{ $q.rst_r }},{{ $q.qth }},{{ $q.note }}]{{ end }}];
+  var MAX_ROWS = 200, DEFAULT_ROWS = 100;
+
+  var q = document.getElementById("lb-q");
+  var bandSel = document.getElementById("lb-band");
+  var modeSel = document.getElementById("lb-mode");
+  var clearBtn = document.getElementById("lb-clear");
+  var body = document.getElementById("lb-body");
+  var note = document.getElementById("lb-note");
+  if (!q || !body) return;
+
+  // populate dropdowns from the data; bands sorted by wavelength (long to short)
+  function bandMeters(b) { var m = /^([\d.]+)(c?m)$/.exec(b); return m ? parseFloat(m[1]) * (m[2] === "cm" ? 0.01 : 1) : -1; }
+  var bands = [], modes = [], seenB = {}, seenM = {};
+  D.forEach(function (r) {
+    if (r[3] && !seenB[r[3]]) { seenB[r[3]] = 1; bands.push(r[3]); }
+    if (r[4] && !seenM[r[4]]) { seenM[r[4]] = 1; modes.push(r[4]); }
+  });
+  bands.sort(function (a, b) { return bandMeters(b) - bandMeters(a); });
+  modes.sort();
+  bands.forEach(function (b) { bandSel.add(new Option(b, b)); });
+  modes.forEach(function (m) { modeSel.add(new Option(m, m)); });
+
+  function esc(s) {
+    return String(s).replace(/[&<>]/g, function (c) {
+      return c === "&" ? "&amp;" : c === "<" ? "&lt;" : "&gt;";
+    });
+  }
+
+  function render(rows, total, filtered) {
+    var html = "";
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i];
+      html += "<tr><td>" + esc(r[0]) + "</td><td>" + esc(r[1]) +
+        '</td><td class="callsign">' + esc(r[2]) + "</td><td>" + esc(r[3]) +
+        "</td><td>" + esc(r[4]) + "</td><td>" + esc(r[5]) + "</td><td>" + esc(r[6]) +
+        "</td><td>" + esc(r[7]) + "</td><td>" + esc(r[8]) + "</td></tr>";
+    }
+    body.innerHTML = html || '<tr><td colspan="9"><em>No copy — nothing in the log matches.</em></td></tr>';
+    if (filtered) {
+      note.textContent = total + " match" + (total === 1 ? "" : "es") +
+        (total > rows.length ? " — showing the " + rows.length + " most recent" : "") +
+        ". All times UTC. S = sent, R = received.";
+    } else {
+      note.textContent = "Showing the " + rows.length + " most recent of " + D.length +
+        " logged QSOs. All times UTC. Signal reports: S = sent, R = received. QSL via QRZ / LoTW.";
+    }
+  }
+
+  function filter() {
+    var text = q.value.trim().toLowerCase();
+    var band = bandSel.value, mode = modeSel.value;
+    if (!text && !band && !mode) {
+      render(D.slice(0, DEFAULT_ROWS), D.length, false);
+      return;
+    }
+    var out = [];
+    for (var i = 0; i < D.length; i++) {
+      var r = D[i];
+      if (band && r[3] !== band) continue;
+      if (mode && r[4] !== mode) continue;
+      if (text) {
+        var hay = (r[2] + " " + r[7] + " " + r[8] + " " + r[0]).toLowerCase();
+        if (hay.indexOf(text) === -1) continue;
+      }
+      out.push(r);
+    }
+    render(out.slice(0, MAX_ROWS), out.length, true);
+  }
+
+  var t;
+  q.addEventListener("input", function () { clearTimeout(t); t = setTimeout(filter, 120); });
+  bandSel.addEventListener("change", filter);
+  modeSel.addEventListener("change", filter);
+  clearBtn.addEventListener("click", function () {
+    q.value = ""; bandSel.value = ""; modeSel.value = "";
+    filter(); q.focus();
+  });
+})();
+</script>
+{{ end }}

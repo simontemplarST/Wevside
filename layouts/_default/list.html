@@ -1,0 +1,23 @@
+{{ define "main" }}
+<article class="box" data-label="{{ .Title }}">
+  <h1>{{ .Title }}</h1>
+  {{ with .Content }}<div class="page-body">{{ . }}</div>{{ end }}
+
+  {{ $pages := .RegularPagesRecursive }}
+  {{ if $pages }}
+    <ul class="post-list">
+      {{ range $pages.ByDate.Reverse }}
+        <li>
+          <a class="title" href="{{ .RelPermalink }}">{{ .Title }}</a>
+          <div class="post-meta">
+            {{ .Date.Format "2006-01-02" }}
+            {{ with .Params.band }} &middot; {{ . }}{{ end }}
+            {{ with .Params.mode }} &middot; {{ . }}{{ end }}
+          </div>
+          <p>{{ .Summary | plainify | truncate 180 }}</p>
+        </li>
+      {{ end }}
+    </ul>
+  {{ end }}
+</article>
+{{ end }}

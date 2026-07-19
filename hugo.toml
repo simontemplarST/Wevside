@@ -1,0 +1,59 @@
+baseURL = "https://example.org/"
+languageCode = "en-us"
+title = "N0YEP — Amateur Radio Station"
+enableRobotsTXT = true
+
+[params]
+  callsign = "N0YEP"
+  operator = "Cameron Heard"
+  qth = "Grid EN33"
+  licenseClass = "General"
+  tagline = "CQ CQ CQ de N0YEP"
+  description = "Personal amateur radio station log, projects, and notes."
+  # On-air light: the callsign PSKReporter watches (see scripts/on-air-light.py)
+  onAirCallsign = "N0YEP"
+
+[menu]
+  [[menu.main]]
+    name = "Home"
+    pageRef = "/"
+    weight = 10
+  [[menu.main]]
+    name = "Logbook"
+    pageRef = "/logbook"
+    weight = 20
+  [[menu.main]]
+    name = "Map"
+    pageRef = "/map"
+    weight = 25
+  [[menu.main]]
+    name = "Blog"
+    pageRef = "/blog"
+    weight = 30
+  [[menu.main]]
+    name = "Station"
+    pageRef = "/station"
+    weight = 40
+  [[menu.main]]
+    name = "Contact"
+    pageRef = "/contact"
+    weight = 50
+
+[minify]
+  # The tdewolff JS minifier silently drops our inline map script; keep JS as-is.
+  disableJS = true
+
+[markup]
+  [markup.goldmark.renderer]
+    unsafe = true
+  [markup.highlight]
+    noClasses = true
+    style = "bw"
+
+[taxonomies]
+  band = "bands"
+  mode = "modes"
+
+[params.social]
+  qrz = "https://www.qrz.com/db/N0YEP"
+  github = "https://github.com/"

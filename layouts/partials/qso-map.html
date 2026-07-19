@@ -1,0 +1,236 @@
+{{/* QSO map — inline equirectangular SVG built from data/qso_map.json
+     (generate with: python3 scripts/build-qso-map.py <log>.adi) */}}
+{{ $m := .Site.Data.qso_map }}
+{{ if $m }}
+{{ $w := $m.view.w }}{{ $h := $m.view.h }}
+{{ $latTop := $m.view.latTop }}{{ $latRange := sub $m.view.latTop $m.view.latBot }}
+{{/* bands present, in HF order, for the legend */}}
+{{ $order := slice "160m" "80m" "60m" "40m" "30m" "20m" "17m" "15m" "12m" "10m" "6m" }}
+{{ $present := slice }}
+{{ range $m.points }}{{ $present = $present | append .band }}{{ end }}
+{{ $present = uniq $present }}
+
+<figure class="qso-map" id="qso-map" data-label="QSO Map">
+  <div class="qso-zoom">
+    <button type="button" data-z="in" aria-label="Zoom in" title="Zoom in">+</button>
+    <button type="button" data-z="out" aria-label="Zoom out" title="Zoom out">−</button>
+    <button type="button" data-z="reset" aria-label="Reset view" title="Reset view">⤢</button>
+  </div>
+  <svg id="qso-svg" viewBox="0 0 {{ $w }} {{ $h }}" preserveAspectRatio="xMidYMid meet"
+       role="img" aria-label="World map of worked stations">
+    <rect class="qso-bg" x="0" y="0" width="{{ $w }}" height="{{ $h }}"/>
+
+    <!-- graticule: 30° longitude, 20° latitude -->
+    <g class="qso-grid">
+      {{ range seq 1 11 }}
+        {{ $x := mul (div $w 12.0) . }}
+        <line x1="{{ $x }}" y1="0" x2="{{ $x }}" y2="{{ $h }}"/>
+      {{ end }}
+      {{ range seq 80 -20 -40 }}
+        {{ $y := mul (div (sub $latTop .) $latRange) $h }}
+        <line x1="0" y1="{{ $y }}" x2="{{ $w }}" y2="{{ $y }}"
+              {{ if eq . 0 }}class="equator"{{ end }}/>
+      {{ end }}
+    </g>
+
+    <path class="qso-land" d="{{ $m.land }}"/>
+
+    <!-- great-circle paths, drawn by JS into here when toggled on -->
+    <g class="qso-arcs" aria-hidden="true"></g>
+
+    <!-- worked stations, largest first so busy spots sit behind -->
+    <g class="qso-dots">
+      {{ range $m.points }}
+        {{ $r := add 1.3 (mul (math.Sqrt .n) 0.62) }}
+        {{ $r := cond (gt $r 8.0) 8.0 $r }}
+        <circle cx="{{ .x }}" cy="{{ .y }}" r="{{ $r }}" data-band="{{ .band }}">
+          <title>{{ .call }} — {{ .n }} QSO{{ if gt .n 1 }}s{{ end }}{{ with .bands }} · {{ delimit . ", " }}{{ end }}</title>
+        </circle>
+      {{ end }}
+    </g>
+
+    {{ with $m.home }}
+    <g class="qso-home">
+      <line x1="{{ sub .x 9 }}" y1="{{ .y }}" x2="{{ add .x 9 }}" y2="{{ .y }}"/>
+      <line x1="{{ .x }}" y1="{{ sub .y 9 }}" x2="{{ .x }}" y2="{{ add .y 9 }}"/>
+      <circle class="ring" cx="{{ .x }}" cy="{{ .y }}" r="6"/>
+      <circle class="core" cx="{{ .x }}" cy="{{ .y }}" r="2.4"><title>Home — {{ .grid }}</title></circle>
+      <text x="{{ add .x 11 }}" y="{{ sub .y 8 }}">{{ .grid }}</text>
+    </g>
+    {{ end }}
+  </svg>
+
+  <div class="qso-controls">
+    <label><input type="checkbox" id="qso-color"> Color by band</label>
+    <label><input type="checkbox" id="qso-arcs"> Great-circle paths</label>
+    <span class="qso-bandlegend" hidden>
+      {{ range $order }}{{ if in $present . }}<span class="bk" data-band="{{ . }}">{{ . }}</span>{{ end }}{{ end }}
+    </span>
+  </div>
+
+  <figcaption class="qso-legend">
+    {{ with $m.stats }}
+    <span><span class="qso-dot-key"></span>{{ .locations }} locations</span>
+    <span><span class="qso-home-key">＋</span>home {{ with $m.home }}{{ .grid }}{{ end }}</span>
+    <span>{{ .mapped }} QSOs · {{ .entities }} DXCC entities</span>
+    <span class="muted">dot size ∝ QSO count · equirectangular projection</span>
+    {{ end }}
+  </figcaption>
+</figure>
+
+{{ with $m.stats }}
+<div class="grid grid--2">
+  <div class="box" data-label="Continents">
+    {{ $max := 1 }}{{ range .continents }}{{ if gt .n $max }}{{ $max = .n }}{{ end }}{{ end }}
+    <table class="qso-bars">
+      {{ range .continents }}
+        <tr>
+          <th>{{ .name }}</th>
+          <td class="bar"><span style="width:{{ math.Round (mul (math.Sqrt (div (float .n) $max)) 100) }}%"></span></td>
+          <td class="num">{{ .n }}</td>
+        </tr>
+      {{ end }}
+    </table>
+    <p class="post-meta" style="margin:8px 0 0">Bar length ∝ √(QSOs) so smaller continents stay visible.</p>
+  </div>
+  <div class="box" data-label="Top Entities">
+    <table class="qso-bars">
+      {{ $cmax := 1 }}{{ range .countries }}{{ if gt .n $cmax }}{{ $cmax = .n }}{{ end }}{{ end }}
+      {{ range .countries }}
+        <tr>
+          <th>{{ .name }}</th>
+          <td class="bar"><span style="width:{{ math.Round (mul (math.Sqrt (div (float .n) $cmax)) 100) }}%"></span></td>
+          <td class="num">{{ .n }}</td>
+        </tr>
+      {{ end }}
+    </table>
+  </div>
+</div>
+
+<script>
+(function () {
+  var fig = document.getElementById("qso-map");
+  if (!fig) return;
+  var V = {w:{{ $w }},h:{{ $h }},latTop:{{ $m.view.latTop }},latBot:{{ $m.view.latBot }}};
+  var HOME = {{ with $m.home }}[{{ .la }},{{ .lo }}]{{ else }}null{{ end }};
+  var PTS = [{{ range $i, $p := $m.points }}{{ if $i }},{{ end }}[{{ $p.la }},{{ $p.lo }}]{{ end }}];
+
+  function proj(lat, lon) {
+    lon = ((lon + 180) % 360 + 360) % 360 - 180;
+    var x = (lon + 180) / 360 * V.w;
+    lat = Math.max(Math.min(lat, V.latTop), V.latBot);
+    var y = (V.latTop - lat) / (V.latTop - V.latBot) * V.h;
+    return [x, y];
+  }
+  // great-circle polyline (lat/lon), split at the antimeridian
+  function arcPath(lat1, lon1, lat2, lon2) {
+    var R = Math.PI / 180, segs = 32;
+    var la1 = lat1 * R, lo1 = lon1 * R, la2 = lat2 * R, lo2 = lon2 * R;
+    var d = 2 * Math.asin(Math.sqrt(Math.pow(Math.sin((la1 - la2) / 2), 2) +
+            Math.cos(la1) * Math.cos(la2) * Math.pow(Math.sin((lo1 - lo2) / 2), 2)));
+    if (!d) return "";
+    var out = "", prevX = null;
+    for (var i = 0; i <= segs; i++) {
+      var f = i / segs;
+      var A = Math.sin((1 - f) * d) / Math.sin(d), B = Math.sin(f * d) / Math.sin(d);
+      var x = A * Math.cos(la1) * Math.cos(lo1) + B * Math.cos(la2) * Math.cos(lo2);
+      var y = A * Math.cos(la1) * Math.sin(lo1) + B * Math.cos(la2) * Math.sin(lo2);
+      var z = A * Math.sin(la1) + B * Math.sin(la2);
+      var lat = Math.atan2(z, Math.sqrt(x * x + y * y)) / R;
+      var lon = Math.atan2(y, x) / R;
+      var p = proj(lat, lon);
+      var cmd = (prevX === null || Math.abs(p[0] - prevX) > V.w / 2) ? "M" : "L";
+      out += cmd + p[0].toFixed(1) + "," + p[1].toFixed(1);
+      prevX = p[0];
+    }
+    return out;
+  }
+
+  var arcsG = fig.querySelector(".qso-arcs"), built = false;
+  function buildArcs() {
+    if (built || !HOME) return;
+    var d = "";
+    for (var i = 0; i < PTS.length; i++) d += arcPath(HOME[0], HOME[1], PTS[i][0], PTS[i][1]);
+    var path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", d);
+    arcsG.appendChild(path);
+    built = true;
+  }
+
+  fig.querySelector("#qso-arcs").addEventListener("change", function (e) {
+    if (e.target.checked) buildArcs();
+    fig.classList.toggle("show-arcs", e.target.checked);
+  });
+  var legend = fig.querySelector(".qso-bandlegend");
+  fig.querySelector("#qso-color").addEventListener("change", function (e) {
+    fig.classList.toggle("color-by-band", e.target.checked);
+    legend.hidden = !e.target.checked;
+  });
+
+  /* ---- zoom & pan (drives the SVG viewBox) ---- */
+  var svg = document.getElementById("qso-svg");
+  var vb = { x: 0, y: 0, w: V.w, h: V.h };
+  var MIN_W = V.w / 12;           // deepest zoom ≈ 12×
+  function apply() {
+    svg.setAttribute("viewBox", vb.x + " " + vb.y + " " + vb.w + " " + vb.h);
+  }
+  function clampView() {
+    vb.w = Math.min(vb.w, V.w); vb.h = Math.min(vb.h, V.h);
+    vb.x = Math.max(0, Math.min(vb.x, V.w - vb.w));
+    vb.y = Math.max(0, Math.min(vb.y, V.h - vb.h));
+  }
+  // zoom keeping the point at fractional (fx,fy) of the viewport fixed
+  function zoomAt(fx, fy, factor) {
+    var nw = Math.max(MIN_W, Math.min(V.w, vb.w * factor));
+    var f = nw / vb.w;
+    var px = vb.x + fx * vb.w, py = vb.y + fy * vb.h;
+    vb.w = nw; vb.h = vb.h * f;
+    vb.x = px - fx * vb.w; vb.y = py - fy * vb.h;
+    clampView(); apply();
+  }
+  function frac(e) {
+    var r = svg.getBoundingClientRect();
+    return [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height];
+  }
+
+  svg.addEventListener("wheel", function (e) {
+    e.preventDefault();
+    var p = frac(e);
+    zoomAt(p[0], p[1], e.deltaY < 0 ? 0.83 : 1 / 0.83);
+  }, { passive: false });
+
+  var drag = null;
+  svg.addEventListener("pointerdown", function (e) {
+    drag = { x: e.clientX, y: e.clientY };
+    svg.setPointerCapture(e.pointerId);
+    fig.classList.add("panning");
+  });
+  svg.addEventListener("pointermove", function (e) {
+    if (!drag) return;
+    var r = svg.getBoundingClientRect();
+    vb.x -= (e.clientX - drag.x) * vb.w / r.width;
+    vb.y -= (e.clientY - drag.y) * vb.h / r.height;
+    drag.x = e.clientX; drag.y = e.clientY;
+    clampView(); apply();
+  });
+  function endDrag(e) {
+    if (!drag) return;
+    drag = null;
+    try { svg.releasePointerCapture(e.pointerId); } catch (_) {}
+    fig.classList.remove("panning");
+  }
+  svg.addEventListener("pointerup", endDrag);
+  svg.addEventListener("pointercancel", endDrag);
+
+  fig.querySelector(".qso-zoom").addEventListener("click", function (e) {
+    var z = e.target.getAttribute("data-z");
+    if (z === "in") zoomAt(0.5, 0.5, 0.7);
+    else if (z === "out") zoomAt(0.5, 0.5, 1 / 0.7);
+    else if (z === "reset") { vb = { x: 0, y: 0, w: V.w, h: V.h }; apply(); }
+  });
+})();
+</script>
+{{ end }}
+{{ else }}
+<div class="placeholder" style="min-height:140px"><span>QSO map — run build-qso-map.py</span></div>
+{{ end }}
