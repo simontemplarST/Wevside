@@ -46,6 +46,16 @@ jobs:
             -c "${{ vars.ONAIR_CALLSIGN || 'N0YEP' }}" \
             -o ./public/on-air.json \
             --appcontact "${{ secrets.PSK_CONTACT }}" || true
+      - name: Refresh APRS status from aprs.fi
+        # Regenerates aprs.json; needs the APRS_API_KEY secret (aprs.fi account
+        # -> "My account" -> API key). Without it, the badge just stays dark.
+        # Exit code 1 just means "quiet" — never fail the deploy on it.
+        run: |
+          python3 scripts/aprs-report.py \
+            -c "${{ vars.ONAIR_CALLSIGN || 'N0YEP' }}" \
+            -o ./public/aprs.json \
+            --window "${{ vars.APRS_WINDOW_HOURS || '24' }}" \
+            --apikey "${{ secrets.APRS_API_KEY }}" || true
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:

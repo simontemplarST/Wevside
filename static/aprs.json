@@ -1,0 +1,14 @@
+{
+  "callsign": "N0YEP",
+  "active": false,
+  "last_heard": 0,
+  "last_heard_iso": null,
+  "last_call": "",
+  "comment": "",
+  "count": 0,
+  "stations": [],
+  "window_hours": 24,
+  "updated": 0,
+  "error": null,
+  "note": "Seed file. Refreshed by the deploy workflow via scripts/aprs-report.py (needs APRS_API_KEY secret)."
+}

@@ -597,6 +597,29 @@ body.qsl-open { overflow: hidden; }
   .onair.is-live .dot { animation: none; }
 }
 
+/* stacked status badges in the masthead */
+.status-badges {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+/* APRS badge — reuses .onair layout; distinct labels + monochrome-inverted
+   "active" state (red is reserved for the real-time PSKReporter light). */
+.aprs .state::after { content: "APRS Quiet"; }
+.aprs.is-live {
+  color: var(--paper);
+  background: var(--ink);
+  border-color: var(--ink);
+}
+.aprs.is-live .dot {
+  background: var(--paper);
+  border-color: var(--paper);
+  animation: none;              /* 24h window, not live — no blink */
+}
+.aprs.is-live .state::after { content: "APRS Active"; }
+
 /* --- morse strip (decorative) ------------------------------------------- */
 .morse {
   font-size: 11px;

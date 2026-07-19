@@ -13,8 +13,8 @@ description: "Rigs, antennas, and shack details for W4XYZ."
 
 ## Antennas
 
-- **9:1 Bullet** — 160-10 m, 50 ft apex, up the mast and sloped off at about 45deg.
-- **LoG (Loop-on-Ground) ** RX antenna for better listening.
+- **9:1 Bullet** — 160-10 m, 46 ft apex, up the mast and sloped off at about 45deg.
+- **LoG (Loop-on-Ground) RX antenna for better listening.
 
 ## Digital & Accessories
 

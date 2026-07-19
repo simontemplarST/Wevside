@@ -3,8 +3,7 @@
 <section class="box" data-label="Hero">
   <h1>{{ .Site.Params.tagline }}</h1>
   {{ with .Content }}{{ . }}{{ else }}
-  <p>Welcome to the station page of <strong>{{ .Site.Params.callsign }}</strong>. Chasing DX,
-     activating parks, and taking notes along the way. Pull up a chair and check the log.</p>
+  <p>Site of <strong>{{ .Site.Params.callsign }}</strong>. Seeing how the vibecoded Hugo theme and map script werks.</p>
   {{ end }}
   <p>
     <a class="btn" href="{{ "logbook/" | relURL }}">View Logbook</a>
@@ -19,7 +18,7 @@
     <tr><th>Class</th><td>{{ .Site.Params.licenseClass }}</td></tr>
     <tr><th>Grid / QTH</th><td>{{ .Site.Params.qth }}</td></tr>
     <tr><th>Rig</th><td>Icom IC-7300</td></tr>
-    <tr><th>Antenna</th><td>9:1 Bullet (160–10 m) @ 30 ft</td></tr>
+    <tr><th>Antenna</th><td>9:1 Bullet (160–10 m) @ 46 ft</td></tr>
   </table>
   <a class="btn" href="{{ "station/" | relURL }}">Full Station Details</a>
 </section>

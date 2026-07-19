@@ -9,6 +9,8 @@ sections, and one red accent reserved for the on-air light.
 - **Live ON AIR badge** — a scheduled GitHub Action polls
   [PSKReporter](https://pskreporter.info/) and the header badge lights red when the
   callsign was spotted in the last ~12 minutes (see [On-air light](#on-air-light)).
+- **APRS badge** — a second badge lights when any `N0YEP-*` was heard on
+  [aprs.fi](https://aprs.fi/) in the last 24 h (see [APRS badge](#aprs-badge)).
 - **Searchable, paged logbook** — full QSO log from `data/log.yaml` with client-side
   search (callsign / QTH / note / date), band/mode filters, and 50-per-page paging.
   Click any callsign for a virtual QSL card.
@@ -53,6 +55,22 @@ Optional GitHub settings:
 
 - **Variable** `ONAIR_CALLSIGN` — override the watched callsign (defaults to `N0YEP`).
 - **Secret** `PSK_CONTACT` — your email, sent to PSKReporter as API etiquette.
+
+## APRS badge
+
+A second header badge lights when any `N0YEP-*` (base call plus SSIDs −1…−15) was
+heard on [aprs.fi](https://aprs.fi/) within the last 24 hours. Same all-GitHub flow:
+the scheduled workflow runs `scripts/aprs-report.py` server-side and writes
+`aprs.json` into the build. The aprs.fi API key stays in a GitHub **secret** — it is
+never exposed on the public site (aprs.fi's terms require this, and the API sends no
+CORS headers anyway).
+
+To enable it, add in the repo's GitHub settings:
+
+- **Secret** `APRS_API_KEY` — from aprs.fi → *My account* → *API key* (free).
+- **Variable** `APRS_WINDOW_HOURS` — optional, defaults to `24`.
+
+Without the secret the badge simply stays dark ("APRS Quiet").
 
 You can also run the poller locally (handy for driving a physical light):
 

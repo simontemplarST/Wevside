@@ -3,8 +3,11 @@
     <h1 class="callsign"><a href="{{ site.Home.RelPermalink }}">{{ .Site.Params.callsign }}</a></h1>
     <p class="sub">{{ .Site.Params.operator }} &middot; {{ .Site.Params.qth }} &middot; {{ .Site.Params.licenseClass }}</p>
   </div>
-  <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+  <div class="status-badges">
     <span class="onair" id="onair" title="Live status from PSKReporter">
+      <span class="dot"></span><span class="state"></span>
+    </span>
+    <span class="onair aprs" id="aprs" title="APRS activity (aprs.fi)">
       <span class="dot"></span><span class="state"></span>
     </span>
     <!-- CW: CQ <AR>  ("calling any station") -->
@@ -39,6 +42,40 @@
             (d.receiver_count ? " by " + d.receiver_count + " station(s)" : "") + " on PSKReporter"
           : (stale ? "On-air status unavailable"
                    : "Not heard on PSKReporter in the last " + FRESH_MIN + " min");
+      })
+      .catch(function () { el.classList.add("is-stale"); });
+  }
+  tick();
+  setInterval(tick, 60000);
+})();
+
+(function () {
+  // APRS badge. Reads aprs.json (refreshed by the same GitHub Action via
+  // scripts/aprs-report.py) and lights up if any N0YEP-* was heard on aprs.fi
+  // within the last `window_hours`.
+  var el = document.getElementById("aprs");
+  if (!el) return;
+  var URL = "{{ "aprs.json" | relURL }}";
+
+  function tick() {
+    fetch(URL + "?t=" + Date.now(), { cache: "no-store" })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (!d) { el.classList.add("is-stale"); return; }
+        var now = Date.now() / 1000;
+        var winSec = (d.window_hours || 24) * 3600;
+        var active = !!d.last_heard && (now - d.last_heard) <= winSec;
+        var stale = (now - (d.updated || 0)) / 60 > 20;   // Action not running
+        el.classList.toggle("is-live", active);
+        el.classList.toggle("is-stale", stale && !active);
+        if (active) {
+          var hrs = Math.round((now - d.last_heard) / 360) / 10;
+          el.title = (d.last_call || d.callsign) + " heard on APRS " + hrs +
+            "h ago" + (d.count > 1 ? " (" + d.count + " SSIDs active)" : "");
+        } else {
+          el.title = stale ? "APRS status unavailable"
+            : "No N0YEP-* on aprs.fi in the last " + (d.window_hours || 24) + "h";
+        }
       })
       .catch(function () { el.classList.add("is-stale"); });
   }
