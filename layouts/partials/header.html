@@ -1,6 +1,6 @@
 <header class="masthead" data-label="Header">
   <div>
-    <h1 class="callsign"><a href="{{ "/" | relURL }}">{{ .Site.Params.callsign }}</a></h1>
+    <h1 class="callsign"><a href="{{ site.Home.RelPermalink }}">{{ .Site.Params.callsign }}</a></h1>
     <p class="sub">{{ .Site.Params.operator }} &middot; {{ .Site.Params.qth }} &middot; {{ .Site.Params.licenseClass }}</p>
   </div>
   <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
@@ -16,7 +16,7 @@
 (function () {
   var el = document.getElementById("onair");
   if (!el) return;
-  var URL = "{{ "/on-air.json" | relURL }}";
+  var URL = "{{ "on-air.json" | relURL }}";
   // consider the op "on air" if heard within this many minutes
   var FRESH_MIN = 12;
   function tick() {
