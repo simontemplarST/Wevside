@@ -1,13 +1,13 @@
 {
   "callsign": "N0YEP",
   "active": false,
-  "last_heard": 0,
-  "last_heard_iso": null,
-  "last_call": "",
-  "comment": "",
+  "last_heard": 1784323508,
+  "last_heard_iso": "2026-07-17T21:25:08+00:00",
+  "last_call": "N0YEP-7",
+  "comment": "omw 2 crz",
   "count": 0,
   "stations": [],
   "window_hours": 24,
-  "updated": 1784495057,
-  "error": "no api key"
+  "updated": 1784505517,
+  "error": null
 }
