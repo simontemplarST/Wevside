@@ -9,7 +9,10 @@ reaches the public static site — aprs.fi's terms forbid exposing the key, and
 the API sends no CORS headers anyway.
 
 API: https://api.aprs.fi/api/get   (docs: https://aprs.fi/page/api)
-Rate limit: aprs.fi asks for no more than one query per minute.
+aprs.fi terms: don't background-poll tightly — "most private web sites only get a
+request once per few hours". This runs from .github/workflows/aprs.yml every 3 h.
+Credit aprs.fi and link back (done in the site footer + APRS badge). The API key
+must stay private (a GitHub secret) — never ship it to the public site.
 
 Usage:
   APRS_API_KEY=xxxx python3 scripts/aprs-report.py -c N0YEP -o static/aprs.json

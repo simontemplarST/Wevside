@@ -1,0 +1,62 @@
+name: Refresh APRS status
+
+# aprs.fi asks applications not to poll on a tight background loop — "most private
+# web sites only get a request once per few hours". So this runs every 3 hours
+# (not on the 15-min deploy cron) and commits static/aprs.json only when the
+# reported status actually changes. The commit triggers the normal Pages deploy,
+# which publishes the updated file. A 24 h "heard recently" window doesn't need
+# finer granularity than this.
+
+on:
+  schedule:
+    - cron: "17 */3 * * *"   # every 3 hours, offset off the top of the hour
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: aprs-refresh
+  cancel-in-progress: true
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Query aprs.fi
+        # Needs the APRS_API_KEY secret (aprs.fi -> My account -> API key).
+        # Without it the script writes an inactive status and the badge stays dark.
+        run: |
+          python3 scripts/aprs-report.py \
+            -c "${{ vars.ONAIR_CALLSIGN || 'N0YEP' }}" \
+            -o static/aprs.json \
+            --window "${{ vars.APRS_WINDOW_HOURS || '24' }}" \
+            --apikey "${{ secrets.APRS_API_KEY }}" || true
+      - name: Commit only if the reported status changed
+        run: |
+          python3 - <<'PY'
+          import json, subprocess
+          new = json.load(open("static/aprs.json"))
+          try:
+              old = json.loads(subprocess.check_output(
+                  ["git", "show", "HEAD:static/aprs.json"], text=True))
+          except Exception:
+              old = {}
+          keys = ["active", "last_heard", "last_call", "count", "error"]
+          changed = any(new.get(k) != old.get(k) for k in keys)
+          open("aprs.changed", "w").write("1" if changed else "0")
+          print("status changed:", changed)
+          PY
+          if [ "$(cat aprs.changed)" = "1" ]; then
+            rm -f aprs.changed
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add static/aprs.json
+            git commit -m "APRS: update ${{ vars.ONAIR_CALLSIGN || 'N0YEP' }} activity status"
+            git push
+          else
+            rm -f aprs.changed
+            echo "No meaningful change — leaving aprs.json as-is."
+          fi

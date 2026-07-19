@@ -7,9 +7,11 @@
     <span class="onair" id="onair" title="Live status from PSKReporter">
       <span class="dot"></span><span class="state"></span>
     </span>
-    <span class="onair aprs" id="aprs" title="APRS activity (aprs.fi)">
+    <a class="onair aprs" id="aprs" title="APRS activity — data from aprs.fi"
+       href="https://aprs.fi/#!call=a%2F{{ .Site.Params.onAirCallsign | default .Site.Params.callsign }}*"
+       target="_blank" rel="noopener">
       <span class="dot"></span><span class="state"></span>
-    </span>
+    </a>
     <!-- CW: CQ <AR>  ("calling any station") -->
     <span class="morse">−·−·  −−·−  ·−·−·</span>
   </div>
@@ -61,20 +63,20 @@
     fetch(URL + "?t=" + Date.now(), { cache: "no-store" })
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (d) {
-        if (!d) { el.classList.add("is-stale"); return; }
+        if (!d) return;   // keep the default dark badge; link still credits aprs.fi
         var now = Date.now() / 1000;
-        var winSec = (d.window_hours || 24) * 3600;
-        var active = !!d.last_heard && (now - d.last_heard) <= winSec;
-        var stale = (now - (d.updated || 0)) / 60 > 20;   // Action not running
+        var win = d.window_hours || 24;
+        // last_heard naturally expires the "active" state after the window, so no
+        // separate staleness check is needed (APRS refreshes only every few hours).
+        var active = !!d.last_heard && (now - d.last_heard) <= win * 3600;
         el.classList.toggle("is-live", active);
-        el.classList.toggle("is-stale", stale && !active);
         if (active) {
           var hrs = Math.round((now - d.last_heard) / 360) / 10;
           el.title = (d.last_call || d.callsign) + " heard on APRS " + hrs +
-            "h ago" + (d.count > 1 ? " (" + d.count + " SSIDs active)" : "");
+            "h ago (aprs.fi)" + (d.count > 1 ? " · " + d.count + " SSIDs" : "");
         } else {
-          el.title = stale ? "APRS status unavailable"
-            : "No N0YEP-* on aprs.fi in the last " + (d.window_hours || 24) + "h";
+          el.title = "No " + (d.callsign || "") + "-* on aprs.fi in the last " +
+            win + "h — data from aprs.fi";
         }
       })
       .catch(function () { el.classList.add("is-stale"); });

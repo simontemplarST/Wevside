@@ -607,6 +607,8 @@ body.qsl-open { overflow: hidden; }
 
 /* APRS badge — reuses .onair layout; distinct labels + monochrome-inverted
    "active" state (red is reserved for the real-time PSKReporter light). */
+a.aprs { text-decoration: none; cursor: pointer; }
+a.aprs:hover { border-color: var(--ink); }
 .aprs .state::after { content: "APRS Quiet"; }
 .aprs.is-live {
   color: var(--paper);

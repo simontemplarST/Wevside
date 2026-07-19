@@ -59,11 +59,18 @@ Optional GitHub settings:
 ## APRS badge
 
 A second header badge lights when any `N0YEP-*` (base call plus SSIDs −1…−15) was
-heard on [aprs.fi](https://aprs.fi/) within the last 24 hours. Same all-GitHub flow:
-the scheduled workflow runs `scripts/aprs-report.py` server-side and writes
-`aprs.json` into the build. The aprs.fi API key stays in a GitHub **secret** — it is
-never exposed on the public site (aprs.fi's terms require this, and the API sends no
-CORS headers anyway).
+heard on [aprs.fi](https://aprs.fi/) within the last 24 hours, and links to the
+station's aprs.fi track page.
+
+A **separate** workflow ([`.github/workflows/aprs.yml`](.github/workflows/aprs.yml))
+runs `scripts/aprs-report.py` **every 3 hours** and commits `static/aprs.json` only
+when the status changes (the commit publishes via the normal deploy). This cadence
+respects aprs.fi's terms — they ask applications not to background-poll tightly
+("most private web sites only get a request once per few hours"), so this is kept
+off the 15-minute on-air deploy cron. The API key stays in a GitHub **secret** and
+is only used server-side — aprs.fi's terms forbid exposing it (and the API sends no
+CORS headers anyway). Attribution + link back to aprs.fi are in the footer and on
+the badge, as their terms require.
 
 To enable it, add in the repo's GitHub settings:
 
