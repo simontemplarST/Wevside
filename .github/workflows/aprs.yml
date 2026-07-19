@@ -44,7 +44,9 @@ jobs:
                   ["git", "show", "HEAD:static/aprs.json"], text=True))
           except Exception:
               old = {}
-          keys = ["active", "last_heard", "last_call", "count", "error"]
+          # Only the reported activity matters for the badge. Ignore the volatile
+          # `updated`/`error` fields so transient aprs.fi hiccups don't churn commits.
+          keys = ["active", "last_heard", "last_call", "count"]
           changed = any(new.get(k) != old.get(k) for k in keys)
           open("aprs.changed", "w").write("1" if changed else "0")
           print("status changed:", changed)
