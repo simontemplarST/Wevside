@@ -500,6 +500,20 @@ body.qsl-open { overflow: hidden; }
 }
 .qso-controls label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; color: var(--ink-soft); }
 .qso-controls input { accent-color: var(--live); }
+.qso-bandsel select {
+  font: 12px/1.3 var(--font);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--ink);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  padding: 3px 6px;
+  border-radius: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+.qso-bandsel select:focus { outline: 1px dashed var(--line-2); outline-offset: 2px; }
 .qso-bandlegend { display: inline-flex; flex-wrap: wrap; gap: 4px 6px; text-transform: none; letter-spacing: 0; }
 .qso-bandlegend .bk {
   font-size: 11px; padding: 1px 6px; border: 1px solid currentColor; border-radius: 2px;

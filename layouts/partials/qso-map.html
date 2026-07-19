@@ -4,10 +4,10 @@
 {{ if $m }}
 {{ $w := $m.view.w }}{{ $h := $m.view.h }}
 {{ $latTop := $m.view.latTop }}{{ $latRange := sub $m.view.latTop $m.view.latBot }}
-{{/* bands present, in HF order, for the legend */}}
+{{/* every band worked anywhere, in HF order, for the legend + band filter */}}
 {{ $order := slice "160m" "80m" "60m" "40m" "30m" "20m" "17m" "15m" "12m" "10m" "6m" }}
 {{ $present := slice }}
-{{ range $m.points }}{{ $present = $present | append .band }}{{ end }}
+{{ range $m.points }}{{ range .bands }}{{ $present = $present | append . }}{{ end }}{{ end }}
 {{ $present = uniq $present }}
 
 <figure class="qso-map" id="qso-map" data-label="QSO Map">
@@ -61,6 +61,12 @@
   </svg>
 
   <div class="qso-controls">
+    <label class="qso-bandsel">Band
+      <select id="qso-band" aria-label="Filter contacts by band">
+        <option value="">All</option>
+        {{ range $order }}{{ if in $present . }}<option value="{{ . }}">{{ . }}</option>{{ end }}{{ end }}
+      </select>
+    </label>
     <label><input type="checkbox" id="qso-color"> Color by band</label>
     <label><input type="checkbox" id="qso-arcs"> Great-circle paths</label>
     <span class="qso-bandlegend" hidden>
@@ -70,7 +76,7 @@
 
   <figcaption class="qso-legend">
     {{ with $m.stats }}
-    <span><span class="qso-dot-key"></span>{{ .locations }} locations</span>
+    <span><span class="qso-dot-key"></span><span id="qso-count">{{ .locations }} locations</span></span>
     <span><span class="qso-home-key">＋</span>home {{ with $m.home }}{{ .grid }}{{ end }}</span>
     <span>{{ .mapped }} QSOs · {{ .entities }} DXCC entities</span>
     <span class="muted">dot size ∝ QSO count · equirectangular projection</span>
@@ -148,16 +154,45 @@
     return out;
   }
 
-  var arcsG = fig.querySelector(".qso-arcs"), built = false;
+  /* ---- band filter ---- */
+  var activeBand = "";
+  function pointVisible(i) {
+    return !activeBand || (QSL[i] && QSL[i].bd && QSL[i].bd.indexOf(activeBand) !== -1);
+  }
+
+  var arcsG = fig.querySelector(".qso-arcs"), builtBand = null;
   function buildArcs() {
-    if (built || !HOME) return;
+    if (!HOME) return;
+    if (builtBand === activeBand && arcsG.firstChild) return;  // already current
     var d = "";
-    for (var i = 0; i < PTS.length; i++) d += arcPath(HOME[0], HOME[1], PTS[i][0], PTS[i][1]);
+    for (var i = 0; i < PTS.length; i++) {
+      if (!pointVisible(i)) continue;
+      d += arcPath(HOME[0], HOME[1], PTS[i][0], PTS[i][1]);
+    }
+    arcsG.textContent = "";
     var path = document.createElementNS("http://www.w3.org/2000/svg", "path");
     path.setAttribute("d", d);
     arcsG.appendChild(path);
-    built = true;
+    builtBand = activeBand;
   }
+
+  var dots = fig.querySelectorAll(".qso-dots circle");
+  var countEl = fig.querySelector("#qso-count");
+  function applyBand() {
+    var shown = 0;
+    for (var i = 0; i < dots.length; i++) {
+      var vis = pointVisible(+dots[i].getAttribute("data-i"));
+      dots[i].style.display = vis ? "" : "none";
+      if (vis) shown++;
+    }
+    if (countEl) countEl.textContent = shown + " location" + (shown === 1 ? "" : "s") +
+      (activeBand ? " on " + activeBand : "");
+    if (fig.classList.contains("show-arcs")) { builtBand = null; buildArcs(); }
+  }
+  fig.querySelector("#qso-band").addEventListener("change", function (e) {
+    activeBand = e.target.value;
+    applyBand();
+  });
 
   fig.querySelector("#qso-arcs").addEventListener("change", function (e) {
     if (e.target.checked) buildArcs();
