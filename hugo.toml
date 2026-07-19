@@ -18,14 +18,10 @@ enableRobotsTXT = true
   licenseClass = "General"
   tagline = "CQ CQ CQ de N0YEP"
   description = "Personal amateur radio station log, projects, and notes."
-  # On-air light: the callsign PSKReporter watches (see scripts/on-air-light.py)
+  # On-air light: the callsign PSKReporter watches. A scheduled GitHub Action
+  # refreshes static/on-air.json from PSKReporter (see .github/workflows/hugo.yml
+  # and scripts/on-air-light.py); the header badge reads that file.
   onAirCallsign = "N0YEP"
-  # PSKReporter blocks browser CORS, so the widget queries it through a CORS
-  # proxy client-side. Set this to your deployed Cloudflare Worker (see
-  # workers/pskreporter-proxy.js), e.g.
-  #   onAirProxy = "https://pskreporter-proxy.<you>.workers.dev/?url="
-  # While empty, the widget uses the static on-air.json fallback instead.
-  onAirProxy = ""
   # Minutes since the last spot to still count as "on air".
   onAirFreshMin = 12
 

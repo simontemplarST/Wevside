@@ -14,98 +14,36 @@
 
 <script>
 (function () {
-  // Client-side ON AIR light. Queries PSKReporter directly from the browser
-  // (via a CORS proxy, since PSKReporter sends no CORS headers), parses the
-  // reception reports here, and falls back to the static on-air.json seed.
+  // ON AIR light. Reads on-air.json, which a scheduled GitHub Action refreshes
+  // from PSKReporter every ~15 min (see .github/workflows/hugo.yml). All hosting
+  // and updating stays on GitHub — no external services.
   var el = document.getElementById("onair");
   if (!el) return;
-  var CALL = {{ .Site.Params.onAirCallsign | default .Site.Params.callsign }};
-  var PROXY = {{ .Site.Params.onAirProxy | default "" }};
-  var STATIC = "{{ "on-air.json" | relURL }}";
+  var URL = "{{ "on-air.json" | relURL }}";
   var FRESH_MIN = {{ .Site.Params.onAirFreshMin | default 12 }};
-  var WINDOW_MIN = 30;          // history requested from PSKReporter
-  var POLL_MIN = 5;             // PSKReporter asks for <= 1 query / 5 min
-  var KEY = "onair:" + CALL;
 
-  function apply(d, stale) {
-    var now = Date.now() / 1000;
-    var ageMin = (now - (d.last_heard || 0)) / 60;
-    var live = d.last_heard && ageMin <= FRESH_MIN;
-    el.classList.toggle("is-live", !!live);
-    el.classList.toggle("is-stale", !!stale && !live);
-    el.title = live
-      ? "Heard " + Math.round(ageMin) + " min ago" +
-        (d.receiver_count ? " by " + d.receiver_count + " station(s)" : "") + " on PSKReporter"
-      : (stale ? "On-air status unavailable" : "Not heard on PSKReporter in the last " + FRESH_MIN + " min");
-  }
-
-  function parseReports(xml) {
-    var doc = new DOMParser().parseFromString(xml, "application/xml");
-    if (doc.getElementsByTagName("parsererror").length) throw new Error("bad xml");
-    var rr = doc.getElementsByTagName("receptionReport");
-    if (!rr.length && xml.indexOf("<receptionReport") === -1 &&
-        /too many|error/i.test(xml)) throw new Error("api error");
-    var now = Date.now() / 1000, newest = 0, rx = {};
-    for (var i = 0; i < rr.length; i++) {
-      var ts = parseInt(rr[i].getAttribute("flowStartSeconds") || "0", 10);
-      if (ts > newest) newest = ts;
-      if (now - ts <= FRESH_MIN * 60) {
-        var c = rr[i].getAttribute("receiverCallsign");
-        if (c) rx[c] = 1;
-      }
-    }
-    return { last_heard: newest, receiver_count: Object.keys(rx).length };
-  }
-
-  function liveQuery() {
-    var target = "https://retrieve.pskreporter.info/query?senderCallsign=" +
-      encodeURIComponent(CALL) + "&flowStartSeconds=-" + (WINDOW_MIN * 60) +
-      "&rronly=1&nolocator=1";
-    var url = PROXY ? PROXY + encodeURIComponent(target) : target;
-    return fetch(url, { cache: "no-store" }).then(function (r) {
-      if (!r.ok) throw new Error("http " + r.status);
-      return r.text();
-    }).then(parseReports);
-  }
-
-  function fromStatic() {
-    return fetch(STATIC + "?t=" + Date.now(), { cache: "no-store" })
+  function tick() {
+    fetch(URL + "?t=" + Date.now(), { cache: "no-store" })
       .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (j) {
-        if (!j) throw new Error("no static");
-        return { last_heard: j.last_heard, receiver_count: j.receiver_count,
-                 _stale: (Date.now() / 1000 - (j.updated || 0)) / 60 > 20 };
-      });
+      .then(function (d) {
+        if (!d) { el.classList.add("is-stale"); return; }
+        var now = Date.now() / 1000;
+        var ageMin = (now - (d.last_heard || 0)) / 60;
+        var live = !!d.last_heard && ageMin <= FRESH_MIN;
+        // status file itself gone stale (Action not running) => dim
+        var stale = (now - (d.updated || 0)) / 60 > 20;
+        el.classList.toggle("is-live", live);
+        el.classList.toggle("is-stale", stale && !live);
+        el.title = live
+          ? "Heard " + Math.round(ageMin) + " min ago" +
+            (d.receiver_count ? " by " + d.receiver_count + " station(s)" : "") + " on PSKReporter"
+          : (stale ? "On-air status unavailable"
+                   : "Not heard on PSKReporter in the last " + FRESH_MIN + " min");
+      })
+      .catch(function () { el.classList.add("is-stale"); });
   }
-
-  function cacheGet() {
-    try {
-      var c = JSON.parse(sessionStorage.getItem(KEY));
-      if (c && (Date.now() - c.t) / 60000 < POLL_MIN) return c.d;
-    } catch (e) {}
-    return null;
-  }
-  function cacheSet(d) {
-    try { sessionStorage.setItem(KEY, JSON.stringify({ t: Date.now(), d: d })); } catch (e) {}
-  }
-
-  function fallback() {
-    fromStatic()
-      .then(function (d) { apply(d, d._stale); })
-      .catch(function () { apply({}, true); });
-  }
-
-  function refresh() {
-    var c = cacheGet();
-    if (c) { apply(c, false); return; }               // respect the rate limit
-    if (!PROXY) { fallback(); return; }               // no proxy -> static only
-    liveQuery()
-      .then(function (d) { cacheSet(d); apply(d, false); })
-      .catch(fallback);                                // proxy down / rate-limited
-  }
-
-  refresh();
-  setInterval(refresh, POLL_MIN * 60 * 1000);
+  tick();
+  setInterval(tick, 60000);
 })();
 </script>
 

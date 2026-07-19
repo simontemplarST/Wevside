@@ -6,8 +6,8 @@ sections, and one red accent reserved for the on-air light.
 
 ## Features
 
-- **Live ON AIR badge** — the header badge queries
-  [PSKReporter](https://pskreporter.info/) **client-side** and lights red when the
+- **Live ON AIR badge** — a scheduled GitHub Action polls
+  [PSKReporter](https://pskreporter.info/) and the header badge lights red when the
   callsign was spotted in the last ~12 minutes (see [On-air light](#on-air-light)).
 - **Searchable, paged logbook** — full QSO log from `data/log.yaml` with client-side
   search (callsign / QTH / note / date), band/mode filters, and 50-per-page paging.
@@ -42,33 +42,25 @@ sanitized `data/log.yaml` (call / date / band / mode / RST / QTH) is committed.
 
 ## On-air light
 
-The badge runs **entirely in the browser**: it queries PSKReporter for recent spots
-of the callsign, parses the reception reports, and lights up if heard within
-`onAirFreshMin` minutes. Results are cached per session for 5 minutes to respect
-PSKReporter's rate limit.
+The badge reads `on-air.json` and lights red when the callsign was spotted within
+`onAirFreshMin` minutes. Everything stays on GitHub: the
+[deploy workflow](.github/workflows/hugo.yml) runs on a **15-minute schedule** and
+regenerates `on-air.json` from PSKReporter (via `scripts/on-air-light.py`) into each
+published build — no external services, no commit churn. If the schedule stalls, the
+file goes stale after 20 minutes and the badge dims.
 
-Because PSKReporter sends no CORS headers, the browser can't call it directly — it
-goes through a small proxy you host. Deploy the included Cloudflare Worker (free):
+Optional GitHub settings:
 
-```bash
-wrangler deploy workers/pskreporter-proxy.js --name pskreporter-proxy
-```
+- **Variable** `ONAIR_CALLSIGN` — override the watched callsign (defaults to `N0YEP`).
+- **Secret** `PSK_CONTACT` — your email, sent to PSKReporter as API etiquette.
 
-Then point the site at it in `hugo.toml`:
-
-```toml
-[params]
-  onAirProxy = "https://pskreporter-proxy.<you>.workers.dev/?url="
-```
-
-While `onAirProxy` is empty, the badge falls back to the static `on-air.json`. That
-file can be refreshed by the standalone poller (also handy for a physical light):
+You can also run the poller locally (handy for driving a physical light):
 
 ```bash
 python3 scripts/on-air-light.py --watch -c N0YEP --appcontact you@example.com
 ```
 
-See [scripts/README.md](scripts/README.md) for the poller details and PSKReporter
+See [scripts/README.md](scripts/README.md) for poller details and PSKReporter
 rate-limit etiquette (max one query per 5 minutes).
 
 ---
