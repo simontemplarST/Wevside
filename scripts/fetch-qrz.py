@@ -21,6 +21,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import html
 import os
 import re
 import sys
@@ -43,10 +44,11 @@ PAGE = 250  # records per FETCH; well under any server cap, keeps calls modest
 def _post(params: dict, timeout: int = 60) -> tuple[dict, str]:
     """POST to the QRZ API; return (parsed fields, raw response).
 
-    The response is `&`-delimited key=value. QRZ does NOT url-encode the ADIF
-    body, so we split off the leading metadata fields (RESULT/COUNT/REASON/…),
-    which are single-token and '&'-safe, and keep the ADIF value verbatim from
-    the first `ADIF=` to end-of-response — never splitting it on its own '&'/'\n'.
+    The response is `&`-delimited key=value. The ADIF body is HTML-entity-encoded
+    (every `<`/`>`/`&` comes back as `&lt;`/`&gt;`/`&amp;`), so we split off the
+    leading metadata fields (RESULT/COUNT/REASON/…) — single-token and '&'-safe —
+    keep the ADIF value verbatim from the first `ADIF=` to end-of-response, then
+    HTML-unescape it back into real ADIF (`<EOR>`, `<CALL:…>`, …).
     """
     body = urllib.parse.urlencode(params).encode()
     req = urllib.request.Request(
@@ -62,10 +64,10 @@ def _post(params: dict, timeout: int = 60) -> tuple[dict, str]:
     fields: dict[str, str] = {}
     remainder = raw
     # Pull the ADIF blob out first (everything after the first ADIF=), so its
-    # own '&' / newlines can't corrupt the metadata parsing.
+    # own '&' / newlines can't corrupt the metadata parsing, then un-escape it.
     m = re.search(r"(?:^|&)ADIF=", remainder, re.IGNORECASE)
     if m:
-        fields["ADIF"] = remainder[m.end():]
+        fields["ADIF"] = html.unescape(remainder[m.end():])
         remainder = remainder[:m.start()]
     for pair in remainder.split("&"):
         if "=" in pair:
