@@ -29,7 +29,7 @@
     {{ range first 4 (where .Site.RegularPages "Section" "blog") }}
       <li>
         <a class="title" href="{{ .RelPermalink }}">{{ .Title }}</a>
-        <div class="post-meta">{{ .Date.Format "2006-01-02" }}{{ with .Params.band }} &middot; {{ . }}{{ end }}{{ with .Params.mode }} &middot; {{ . }}{{ end }}</div>
+        <div class="post-meta">{{ .Date.Format "2006-01-02" }}{{ with .Params.hobby }} &middot; {{ . }}{{ end }}</div>
         <p>{{ .Summary | plainify | truncate 160 }}</p>
       </li>
     {{ else }}

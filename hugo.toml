@@ -63,8 +63,7 @@ enableRobotsTXT = true
     style = "bw"
 
 [taxonomies]
-  band = "bands"
-  mode = "modes"
+  hobby = "hobbies"
 
 [params.social]
   qrz = "https://www.qrz.com/db/N0YEP"

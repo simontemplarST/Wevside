@@ -1,8 +1,7 @@
 ---
 title: "{{ replace .Name "-" " " | title }}"
 date: {{ .Date }}
-band: ""
-mode: ""
+hobby: "Ham Radio"
 summary: ""
 draft: false
 ---

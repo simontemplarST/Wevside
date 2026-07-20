@@ -5,8 +5,7 @@
   {{ if not .Date.IsZero }}
     <div class="post-meta">
       {{ .Date.Format "Monday, 02 Jan 2006" }}
-      {{ with .Params.band }} &middot; Band: {{ . }}{{ end }}
-      {{ with .Params.mode }} &middot; Mode: {{ . }}{{ end }}
+      {{ with .Params.hobby }} &middot; {{ . }}{{ end }}
       {{ with .ReadingTime }} &middot; {{ . }} min{{ end }}
     </div>
   {{ end }}

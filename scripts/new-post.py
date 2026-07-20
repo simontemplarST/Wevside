@@ -31,9 +31,13 @@ import sys
 import tempfile
 from datetime import datetime
 
-FIELDS = ["title", "band", "mode", "summary", "draft", "body"]
-LABELS = {"title": "Title", "band": "Band", "mode": "Mode",
-          "summary": "Summary", "draft": "Draft"}
+FIELDS = ["title", "hobby", "summary", "draft", "body"]
+TEXT_FIELDS = ["title", "hobby", "summary"]   # single-line front-matter inputs
+LABELS = {"title": "Title", "hobby": "Hobby", "summary": "Summary",
+          "draft": "Draft"}
+DRAFT_IDX = FIELDS.index("draft")
+BODY_IDX = FIELDS.index("body")
+DEFAULT_HOBBY = "Ham Radio"
 HINT = " ^O Finish   ^P Preview   ^E $EDITOR   ^X Quit   Tab Next field "
 
 
@@ -135,8 +139,7 @@ class App:
         self.root = root
         self.fields = {
             "title": seed.get("title", ""),
-            "band": seed.get("band", ""),
-            "mode": seed.get("mode", ""),
+            "hobby": seed.get("hobby", DEFAULT_HOBBY),
             "summary": seed.get("summary", ""),
         }
         self.fcx = {k: len(v) for k, v in self.fields.items()}  # per-field cursor
@@ -173,7 +176,7 @@ class App:
 
         # front-matter fields
         y = 2
-        for i, key in enumerate(["title", "band", "mode", "summary"]):
+        for i, key in enumerate(TEXT_FIELDS):
             focused = self.focus == i
             label = f"{LABELS[key]:>8}: "
             self._put(stdscr, y, 2, label, bold)
@@ -182,7 +185,7 @@ class App:
                       curses.A_UNDERLINE if focused else 0)
             y += 1
         # draft toggle
-        focused = self.focus == 4
+        focused = self.focus == DRAFT_IDX
         self._put(stdscr, y, 2, f"{'Draft':>8}: ", bold)
         box = "[x] draft (unpublished)" if self.draft else "[ ] publish now"
         self._put(stdscr, y, 12, box, rev if focused else 0)
@@ -223,7 +226,7 @@ class App:
                 self._put(stdscr, y0 + i, x0, ed.lines[row][leftcol:leftcol + width])
 
     def _place_cursor(self, stdscr, body_top, x0, body_h, body_w, form_y):
-        if self.focus == 5:  # body
+        if self.focus == BODY_IDX:  # body
             ed = self.editor
             leftcol = max(0, ed.cx - body_w + 1)
             cy = body_top + (ed.cy - ed.top)
@@ -232,8 +235,8 @@ class App:
                 stdscr.move(cy, cx)
             except curses.error:
                 pass
-        elif self.focus < 4:
-            key = ["title", "band", "mode", "summary"][self.focus]
+        elif self.focus < len(TEXT_FIELDS):
+            key = TEXT_FIELDS[self.focus]
             label = f"{LABELS[key]:>8}: "
             try:
                 stdscr.move(2 + self.focus, 2 + len(label) + self.fcx[key])
@@ -290,13 +293,13 @@ class App:
             self.focus = (self.focus - 1) % len(FIELDS)
             return True
 
-        if self.focus == 5:                    # body editor
+        if self.focus == BODY_IDX:             # body editor
             self._body_key(ch, page)
-        elif self.focus == 4:                  # draft toggle
+        elif self.focus == DRAFT_IDX:          # draft toggle
             if ch == " " or ch in ("\n", "\r", curses.KEY_ENTER):
                 self.draft = not self.draft
         else:                                  # text fields
-            key = ["title", "band", "mode", "summary"][self.focus]
+            key = TEXT_FIELDS[self.focus]
             if ch in ("\n", "\r", curses.KEY_ENTER):
                 self.focus += 1
             else:
@@ -354,8 +357,7 @@ class App:
             "---\n"
             f'title: "{esc(self.fields["title"])}"\n'
             f"date: {date}\n"
-            f'band: "{esc(self.fields["band"])}"\n'
-            f'mode: "{esc(self.fields["mode"])}"\n'
+            f'hobby: "{esc(self.fields["hobby"])}"\n'
             f'summary: "{esc(self.fields["summary"])}"\n'
             f"draft: {'true' if self.draft else 'false'}\n"
             "---\n\n"

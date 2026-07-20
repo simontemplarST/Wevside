@@ -26,7 +26,7 @@ sections, and one red accent reserved for the on-air light.
 ## Writing blog posts
 
 `./new-post.sh` opens a local terminal editor (a curses TUI, no browser) for composing
-a post — a front-matter form (title / band / mode / summary / draft) plus a built-in
+a post — a front-matter form (title / hobby / summary / draft) plus a built-in
 scrollable Markdown editor:
 
 ```bash
