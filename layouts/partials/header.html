@@ -8,7 +8,7 @@
       <span class="dot"></span><span class="state"></span>
     </span>
     <a class="onair aprs" id="aprs" title="APRS activity — data from aprs.fi"
-       href="https://aprs.fi/#!call=a%2F{{ .Site.Params.onAirCallsign | default .Site.Params.callsign }}*"
+       href="https://aprs.fi/#!call={{ .Site.Params.onAirCallsign | default .Site.Params.callsign }}"
        target="_blank" rel="noopener">
       <span class="dot"></span><span class="state"></span>
     </a>
