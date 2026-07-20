@@ -42,13 +42,7 @@ def targets(base: str) -> str:
     return ",".join([base] + [f"{base}-{i}" for i in range(1, 16)])
 
 
-def query(base: str, apikey: str, timeout: int = 30) -> list[dict]:
-    params = {
-        "name": targets(base),
-        "what": "loc",
-        "apikey": apikey,
-        "format": "json",
-    }
+def _get(params: dict, timeout: int = 30) -> dict:
     req = urllib.request.Request(
         f"{API_URL}?{urllib.parse.urlencode(params)}",
         headers={"User-Agent": USER_AGENT},
@@ -57,7 +51,28 @@ def query(base: str, apikey: str, timeout: int = 30) -> list[dict]:
         data = json.loads(resp.read().decode("utf-8", "replace"))
     if data.get("result") != "ok":
         raise RuntimeError(data.get("description") or data.get("code") or "aprs.fi error")
+    return data
+
+
+def query(base: str, apikey: str, timeout: int = 30) -> list[dict]:
+    """what=loc — the last *position* aprs.fi holds for each SSID."""
+    data = _get({"name": targets(base), "what": "loc",
+                 "apikey": apikey, "format": "json"}, timeout)
     return data.get("entries", []) or []
+
+
+def query_msg(base: str, apikey: str, timeout: int = 30) -> list[dict]:
+    """what=msg — latest messages *received by* each SSID (dst-filtered, max 10
+    recipients/call). Catches message/status-only stations that never beacon a
+    position, so they never show up in the what=loc result."""
+    names = [t.strip() for t in targets(base).split(",")]
+    entries: list[dict] = []
+    for i in range(0, len(names), 10):        # API caps recipients at 10 per call
+        chunk = ",".join(names[i:i + 10])
+        data = _get({"dst": chunk, "what": "msg",
+                     "apikey": apikey, "format": "json"}, timeout)
+        entries.extend(data.get("entries", []) or [])
+    return entries
 
 
 def build_status(base: str, entries: list[dict], window_h: int) -> dict:
@@ -145,6 +160,19 @@ def main() -> int:
                 age = f"{round((now - ts) / 3600, 1)}h ago" if ts else "never"
                 print(f"    {e.get('name',''):<10} {age:<12} "
                       f"{(e.get('comment') or '')[:40]}", file=sys.stderr)
+            # DIAGNOSTIC: dump the raw what=msg result so we can see how aprs.fi
+            # reports message/status-only SSIDs (e.g. N0YEP-1 with no position).
+            try:
+                msgs = query_msg(args.callsign, args.apikey)
+                print(f"  what=msg returned {len(msgs)} message(s):", file=sys.stderr)
+                for m in msgs[:20]:
+                    mt = int(m.get("time") or 0)
+                    mage = f"{round((now - mt) / 3600, 1)}h ago" if mt else "?"
+                    print(f"    src={m.get('srccall','')!r:14} dst={m.get('dst','')!r:14}"
+                          f" {mage:<10} msg={m.get('message','')[:40]!r}",
+                          file=sys.stderr)
+            except Exception as mexc:  # diagnostic only — never fail the run
+                print(f"  what=msg diagnostic failed: {mexc}", file=sys.stderr)
     except (urllib.error.URLError, RuntimeError, ValueError, OSError) as exc:
         status = offline(args.callsign, args.window, str(exc))
 
