@@ -40,10 +40,13 @@ _EOH_RE = re.compile(r"<eoh>", re.IGNORECASE)
 PAGE = 250  # records per FETCH; well under any server cap, keeps calls modest
 
 
-def _post(params: dict, timeout: int = 60) -> dict:
-    """POST to the QRZ API and split the url-encoded key=value response.
+def _post(params: dict, timeout: int = 60) -> tuple[dict, str]:
+    """POST to the QRZ API; return (parsed fields, raw response).
 
-    Values are percent-encoded, so the ADIF's own '&'/'=' are safe to split on.
+    The response is `&`-delimited key=value. QRZ does NOT url-encode the ADIF
+    body, so we split off the leading metadata fields (RESULT/COUNT/REASON/…),
+    which are single-token and '&'-safe, and keep the ADIF value verbatim from
+    the first `ADIF=` to end-of-response — never splitting it on its own '&'/'\n'.
     """
     body = urllib.parse.urlencode(params).encode()
     req = urllib.request.Request(
@@ -55,12 +58,20 @@ def _post(params: dict, timeout: int = 60) -> dict:
     )
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         raw = resp.read().decode("utf-8", "replace")
+
     fields: dict[str, str] = {}
-    for pair in raw.split("&"):
+    remainder = raw
+    # Pull the ADIF blob out first (everything after the first ADIF=), so its
+    # own '&' / newlines can't corrupt the metadata parsing.
+    m = re.search(r"(?:^|&)ADIF=", remainder, re.IGNORECASE)
+    if m:
+        fields["ADIF"] = remainder[m.end():]
+        remainder = remainder[:m.start()]
+    for pair in remainder.split("&"):
         if "=" in pair:
             k, v = pair.split("=", 1)
             fields[k.strip().upper()] = urllib.parse.unquote_plus(v)
-    return fields
+    return fields, raw
 
 
 def _records_only(adif: str) -> str:
@@ -78,16 +89,14 @@ def fetch_all(key: str) -> tuple[str, int]:
         option = f"MAX:{PAGE}"
         if after:
             option += f",AFTERLOGID:{after}"
-        fields = _post({"KEY": key, "ACTION": "FETCH", "OPTION": option})
+        fields, raw = _post({"KEY": key, "ACTION": "FETCH", "OPTION": option})
 
         if not after:
             # One-line, PII-free summary of the first response so a failed run is
-            # diagnosable from the log (keys + status only — never the log data).
-            meta = {k: v for k, v in fields.items()
-                    if k not in ("ADIF", "DATA")}
-            lens = {k: len(v) for k, v in fields.items() if k in ("ADIF", "DATA")}
-            print(f"fetch-qrz: first response keys={sorted(fields)} "
-                  f"meta={meta} datalen={lens}", file=sys.stderr)
+            # diagnosable from the log (status + structure only, no contact data).
+            meta = {k: v for k, v in fields.items() if k != "ADIF"}
+            print(f"fetch-qrz: RESULT-fields={meta} adif_len={len(fields.get('ADIF',''))} "
+                  f"raw_len={len(raw)} amp={raw.count('&')}", file=sys.stderr)
 
         result = (fields.get("RESULT") or "").upper()
         if result != "OK":
