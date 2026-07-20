@@ -55,24 +55,17 @@ def _get(params: dict, timeout: int = 30) -> dict:
 
 
 def query(base: str, apikey: str, timeout: int = 30) -> list[dict]:
-    """what=loc — the last *position* aprs.fi holds for each SSID."""
+    """what=loc — the last *position* aprs.fi holds for each SSID.
+
+    NOTE: this is the only "last heard" the aprs.fi API exposes per station. The
+    API has no what=status, and what=msg is filtered by recipient (dst) not
+    sender, so a message/status-only SSID with no position beacon (e.g. a phone
+    app that only sends status text) is invisible here — even though aprs.fi's
+    *web* page, which reads the raw APRS-IS feed, still shows it as "heard".
+    """
     data = _get({"name": targets(base), "what": "loc",
                  "apikey": apikey, "format": "json"}, timeout)
     return data.get("entries", []) or []
-
-
-def query_msg(base: str, apikey: str, timeout: int = 30) -> list[dict]:
-    """what=msg — latest messages *received by* each SSID (dst-filtered, max 10
-    recipients/call). Catches message/status-only stations that never beacon a
-    position, so they never show up in the what=loc result."""
-    names = [t.strip() for t in targets(base).split(",")]
-    entries: list[dict] = []
-    for i in range(0, len(names), 10):        # API caps recipients at 10 per call
-        chunk = ",".join(names[i:i + 10])
-        data = _get({"dst": chunk, "what": "msg",
-                     "apikey": apikey, "format": "json"}, timeout)
-        entries.extend(data.get("entries", []) or [])
-    return entries
 
 
 def build_status(base: str, entries: list[dict], window_h: int) -> dict:
@@ -160,19 +153,6 @@ def main() -> int:
                 age = f"{round((now - ts) / 3600, 1)}h ago" if ts else "never"
                 print(f"    {e.get('name',''):<10} {age:<12} "
                       f"{(e.get('comment') or '')[:40]}", file=sys.stderr)
-            # DIAGNOSTIC: dump the raw what=msg result so we can see how aprs.fi
-            # reports message/status-only SSIDs (e.g. N0YEP-1 with no position).
-            try:
-                msgs = query_msg(args.callsign, args.apikey)
-                print(f"  what=msg returned {len(msgs)} message(s):", file=sys.stderr)
-                for m in msgs[:20]:
-                    mt = int(m.get("time") or 0)
-                    mage = f"{round((now - mt) / 3600, 1)}h ago" if mt else "?"
-                    print(f"    src={m.get('srccall','')!r:14} dst={m.get('dst','')!r:14}"
-                          f" {mage:<10} msg={m.get('message','')[:40]!r}",
-                          file=sys.stderr)
-            except Exception as mexc:  # diagnostic only — never fail the run
-                print(f"  what=msg diagnostic failed: {mexc}", file=sys.stderr)
     except (urllib.error.URLError, RuntimeError, ValueError, OSError) as exc:
         status = offline(args.callsign, args.window, str(exc))
 
