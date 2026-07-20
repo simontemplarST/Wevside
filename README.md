@@ -23,6 +23,24 @@ sections, and one red accent reserved for the on-air light.
 - **ADIF importer** — `scripts/import-adif.py` converts any ADIF log (QRZ, LoTW,
   WSJT-X, …) into `data/log.yaml`, scrubbing emails/URLs/phones from free text.
 
+## Writing blog posts
+
+`./new-post.sh` opens a local terminal editor (a curses TUI, no browser) for composing
+a post — a front-matter form (title / band / mode / summary / draft) plus a built-in
+scrollable Markdown editor:
+
+```bash
+./new-post.sh                 # start a new post
+./new-post.sh --title "…"     # pre-fill the title
+./new-post.sh --resume        # resume an unsaved recovery draft
+```
+
+Keys: `Tab` moves between fields, arrows move in the body, `^E` opens the body in your
+`$EDITOR`, `^P` saves a draft so a running `hugo server` previews it at
+`localhost:1313/blog/<slug>/`, `^O` **finishes** — writes `content/blog/<slug>.md`,
+builds with Hugo, commits to git, and offers to push (which triggers the deploy). `^X`
+quits and offers to save a recovery draft.
+
 ## Logbook source
 
 The logbook is pulled from the **QRZ Logbook API**, server-side, entirely on GitHub.

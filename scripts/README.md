@@ -1,5 +1,10 @@
 # Scripts
 
+- **`new-post.py`** — a local terminal (curses) front-end for writing blog posts:
+  a front-matter form + a built-in scrollable Markdown editor. `^P` saves a draft so
+  your running `hugo server` previews it; `^E` opens `$EDITOR`; `^O` finishes — writes
+  `content/blog/<slug>.md`, builds with Hugo, and commits to git. Run `./new-post.sh`
+  (or `python3 scripts/new-post.py`); `--resume` reopens an unsaved draft.
 - **`fetch-qrz.py`** — downloads the full logbook from the QRZ Logbook API as ADIF
   (`QRZ_API_KEY=xxxx python3 scripts/fetch-qrz.py -o log.adi`). Server-side only —
   the key is a subscription credential and the API has no CORS. Pages through the log
