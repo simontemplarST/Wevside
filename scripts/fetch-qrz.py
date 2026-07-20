@@ -98,30 +98,34 @@ def fetch_all(key: str) -> tuple[str, int]:
             print(f"fetch-qrz: RESULT-fields={meta} adif_len={len(fields.get('ADIF',''))} "
                   f"raw_len={len(raw)} amp={raw.count('&')}", file=sys.stderr)
 
-        result = (fields.get("RESULT") or "").upper()
-        if result != "OK":
-            reason = (fields.get("REASON") or fields.get("STATUS") or "").strip()
-            # "no records"/empty is a normal end-of-paging signal, not an error.
-            if not after and reason:
-                raise RuntimeError(f"QRZ FETCH failed: {reason}")
-            break
-
         adif = fields.get("ADIF", "") or ""
-        count = int(fields.get("COUNT") or 0)
-        if count == 0 or not adif.strip():
+        # Count records from the ADIF's own <EOR> markers rather than the COUNT
+        # field — robust to where COUNT sits in the response and to it being
+        # swallowed into the raw ADIF blob.
+        n = len(re.findall(r"<eor>", adif, re.IGNORECASE))
+        result = (fields.get("RESULT") or "").upper()
+
+        if n == 0:
+            # No records this page. On the first page a stated FAIL/error is a
+            # real failure; otherwise it's just the end of paging.
+            reason = (fields.get("REASON") or fields.get("STATUS") or "").strip()
+            if not after and result and result != "OK":
+                raise RuntimeError(f"QRZ FETCH failed: {reason or result}")
             break
 
         bodies.append(_records_only(adif).strip())
-        total += count
+        total += n
 
         logids = [int(x) for x in _LOGID_RE.findall(adif)]
         nxt = max(logids) if logids else 0
-        if nxt <= after:
-            # No usable cursor (or no progress) — stop rather than loop forever.
+        if n < PAGE:            # last (partial) page — done
+            break
+        if nxt <= after:        # full page but no usable cursor — can't page on
+            print(f"fetch-qrz: WARNING stopped at {total} records — no "
+                  f"APP_QRZLOG_LOGID to page past (got a full page of {n}).",
+                  file=sys.stderr)
             break
         after = nxt
-        if count < PAGE:  # last (partial) page
-            break
 
     header = "ADIF export via scripts/fetch-qrz.py\n<ADIF_VER:5>3.1.4\n<EOH>\n"
     return header + "\n".join(b for b in bodies if b) + "\n", total
