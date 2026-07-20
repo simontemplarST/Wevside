@@ -1,13 +1,15 @@
 {
   "callsign": "N0YEP",
-  "active": false,
-  "last_heard": 1784323508,
-  "last_heard_iso": "2026-07-17T21:25:08+00:00",
+  "active": true,
+  "last_heard": 1784582725,
+  "last_heard_iso": "2026-07-20T21:25:25+00:00",
   "last_call": "N0YEP-7",
-  "comment": "omw 2 crz",
-  "count": 0,
-  "stations": [],
+  "comment": "146.730MHz T100omw 2 crz",
+  "count": 1,
+  "stations": [
+    "N0YEP-7"
+  ],
   "window_hours": 24,
-  "updated": 1784505517,
+  "updated": 1784585642,
   "error": null
 }
