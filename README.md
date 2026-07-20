@@ -65,16 +65,24 @@ Without the secret the workflow no-ops and the committed logbook is left untouch
 
 ## Rebuild locally
 
-`./rebuild.sh` regenerates the derived data (logbook + map) and builds the site. It
+`./rebuild.sh` regenerates the derived data (logbook + map), builds the site, then
+**commits the changed data and pushes to origin** (which triggers the Pages deploy). It
 uses a local ADIF file if present, else pulls from QRZ when `QRZ_API_KEY` is set, else
 reuses the committed data:
 
 ```bash
-./rebuild.sh                       # local n0yep-logbook.adi if present, else QRZ, else committed data
+./rebuild.sh                       # rebuild, commit changed data, push
 QRZ_API_KEY=xxxx ./rebuild.sh      # force a fresh pull from the QRZ API
 ./rebuild.sh your-log.adi FN31     # custom ADIF + home grid
-./rebuild.sh --serve               # rebuild, then start `hugo server`
+./rebuild.sh --serve               # rebuild (+commit/push), then `hugo server`
+./rebuild.sh --no-commit           # rebuild only, leave git untouched
+./rebuild.sh --no-push             # commit regenerated data, but don't push
 ```
+
+The commit is scoped to `data/log.yaml` + `data/qso_map.json` (so unrelated
+work-in-progress is left alone) and only happens when they actually change. If the push
+is rejected because the QRZ refresh bot pushed first, it rebases and retries
+automatically.
 
 Or run the steps individually:
 
