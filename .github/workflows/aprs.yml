@@ -2,14 +2,15 @@ name: Refresh APRS status
 
 # aprs.fi asks applications not to poll on a tight background loop — "most private
 # web sites only get a request once per few hours". So this runs every 3 hours
-# (not on the 15-min deploy cron) and commits static/aprs.json only when the
-# reported status actually changes. The commit triggers the normal Pages deploy,
-# which publishes the updated file. A 24 h "heard recently" window doesn't need
-# finer granularity than this.
+# (plus on each commit, which is occasional and user-initiated, not a tight loop)
+# and commits static/aprs.json only when the reported status actually changes.
+# A 24 h "heard recently" window doesn't need finer granularity than this.
 
 on:
+  push:
+    branches: [main]
   schedule:
-    - cron: "17 */3 * * *"   # every 3 hours, offset off the top of the hour
+    - cron: "5 */3 * * *"    # every 3 hours (offset so it runs before the :10 deploy)
   workflow_dispatch:
 
 permissions:

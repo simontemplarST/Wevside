@@ -4,10 +4,12 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
-  # Refresh the ON AIR badge from PSKReporter, server-side, entirely on GitHub.
-  # 15 min stays well clear of PSKReporter's 1-query-per-5-min limit.
+  # Deploy on every commit, and otherwise every 3 hours. The :10 offset lets the
+  # qrz-logbook (:00) and aprs (:05) refreshers commit their data first, so this
+  # build publishes the freshest logbook/APRS status. Also refreshes the ON AIR
+  # badge from PSKReporter in-build (see the step below).
   schedule:
-    - cron: "*/15 * * * *"
+    - cron: "10 */3 * * *"
 
 permissions:
   contents: read

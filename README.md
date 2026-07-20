@@ -45,7 +45,7 @@ quits and offers to save a recovery draft.
 
 The logbook is pulled from the **QRZ Logbook API**, server-side, entirely on GitHub.
 A dedicated workflow ([`.github/workflows/qrz-logbook.yml`](.github/workflows/qrz-logbook.yml))
-runs **every 6 hours**: it fetches the full log as ADIF with `scripts/fetch-qrz.py`,
+runs **every 3 hours (and on each commit)**: it fetches the full log as ADIF with `scripts/fetch-qrz.py`,
 regenerates `data/log.yaml` + `data/qso_map.json`, and commits them only when the log
 actually changes — that commit triggers the normal deploy, so the logbook and map
 rebuild along with the site.
@@ -99,10 +99,15 @@ Raw `.adi` exports are gitignored — they contain third-party names/emails.
 
 The badge reads `on-air.json` and lights red when the callsign was spotted within
 `onAirFreshMin` minutes. Everything stays on GitHub: the
-[deploy workflow](.github/workflows/hugo.yml) runs on a **15-minute schedule** and
-regenerates `on-air.json` from PSKReporter (via `scripts/on-air-light.py`) into each
-published build — no external services, no commit churn. If the schedule stalls, the
-file goes stale after 20 minutes and the badge dims.
+[deploy workflow](.github/workflows/hugo.yml) runs **every 3 hours and on each commit**
+and regenerates `on-air.json` from PSKReporter (via `scripts/on-air-light.py`) into each
+published build — no external services, no commit churn.
+
+> **Note:** because the deploy only refreshes on that 3-hour cadence, `on-air.json` is a
+> snapshot from the last build, not a live feed — the badge reflects PSKReporter activity
+> as of the most recent deploy. To make the light genuinely live again, give this workflow
+> a tighter `schedule` (e.g. `*/15 * * * *`) or run `scripts/on-air-light.py --watch`
+> locally against the published `on-air.json`.
 
 Optional GitHub settings:
 
@@ -116,11 +121,11 @@ heard on [aprs.fi](https://aprs.fi/) within the last 24 hours, and links to the
 station's aprs.fi track page.
 
 A **separate** workflow ([`.github/workflows/aprs.yml`](.github/workflows/aprs.yml))
-runs `scripts/aprs-report.py` **every 3 hours** and commits `static/aprs.json` only
-when the status changes (the commit publishes via the normal deploy). This cadence
-respects aprs.fi's terms — they ask applications not to background-poll tightly
-("most private web sites only get a request once per few hours"), so this is kept
-off the 15-minute on-air deploy cron. The API key stays in a GitHub **secret** and
+runs `scripts/aprs-report.py` **every 3 hours (and on each commit)** and commits
+`static/aprs.json` only when the status changes (the next deploy publishes it). This
+cadence respects aprs.fi's terms — they ask applications not to background-poll tightly
+("most private web sites only get a request once per few hours"); a commit-triggered run
+is occasional and user-initiated, not a loop. The API key stays in a GitHub **secret** and
 is only used server-side — aprs.fi's terms forbid exposing it (and the API sends no
 CORS headers anyway). Attribution + link back to aprs.fi are in the footer and on
 the badge, as their terms require.

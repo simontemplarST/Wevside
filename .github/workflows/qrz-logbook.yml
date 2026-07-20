@@ -3,13 +3,14 @@ name: Refresh logbook from QRZ
 # Pulls the logbook straight from the QRZ Logbook API (server-side, so the API
 # key stays in a secret and the raw ADIF — which carries third-party PII — never
 # lands in git). Regenerates the sanitized data files and commits them only when
-# the log actually changes; that commit triggers the normal Pages deploy, so the
-# logbook rebuilds along with the site. A logbook changes slowly, so every 6 h is
-# plenty and keeps QRZ API calls modest.
+# the log actually changes; the next deploy publishes them, so the logbook
+# rebuilds along with the site. Runs every 3 hours and on each commit.
 
 on:
+  push:
+    branches: [main]
   schedule:
-    - cron: "23 */6 * * *"   # every 6 hours, offset off the top of the hour
+    - cron: "0 */3 * * *"    # every 3 hours (runs before the :05 aprs / :10 deploy)
   workflow_dispatch:
 
 permissions:
