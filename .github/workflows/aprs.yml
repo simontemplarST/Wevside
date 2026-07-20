@@ -33,7 +33,8 @@ jobs:
             -c "${{ vars.ONAIR_CALLSIGN || 'N0YEP' }}" \
             -o static/aprs.json \
             --window "${{ vars.APRS_WINDOW_HOURS || '24' }}" \
-            --apikey "${{ secrets.APRS_API_KEY }}" || true
+            --apikey "${{ secrets.APRS_API_KEY }}" \
+            --verbose || true
       - name: Commit only if the reported status changed
         run: |
           python3 - <<'PY'

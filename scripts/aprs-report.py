@@ -119,6 +119,8 @@ def main() -> int:
                    default=int(os.environ.get("APRS_WINDOW_HOURS", "24")),
                    help="hours to count as 'active' (default 24)")
     p.add_argument("--apikey", default=os.environ.get("APRS_API_KEY", ""))
+    p.add_argument("-v", "--verbose", action="store_true",
+                   help="log each SSID's last-heard time (goes to stderr, no key exposed)")
     args = p.parse_args()
 
     if not args.apikey:
@@ -131,6 +133,18 @@ def main() -> int:
     try:
         entries = query(args.callsign, args.apikey)
         status = build_status(args.callsign, entries, args.window)
+        if args.verbose:
+            now = time.time()
+            print("  per-SSID last-heard (as returned by aprs.fi):", file=sys.stderr)
+            if not entries:
+                print("    (none — no SSID has a stored position on aprs.fi)",
+                      file=sys.stderr)
+            for e in sorted(entries, key=lambda x: int(x.get("lasttime") or 0),
+                            reverse=True):
+                ts = int(e.get("lasttime") or 0)
+                age = f"{round((now - ts) / 3600, 1)}h ago" if ts else "never"
+                print(f"    {e.get('name',''):<10} {age:<12} "
+                      f"{(e.get('comment') or '')[:40]}", file=sys.stderr)
     except (urllib.error.URLError, RuntimeError, ValueError, OSError) as exc:
         status = offline(args.callsign, args.window, str(exc))
 
