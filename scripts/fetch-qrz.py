@@ -80,6 +80,15 @@ def fetch_all(key: str) -> tuple[str, int]:
             option += f",AFTERLOGID:{after}"
         fields = _post({"KEY": key, "ACTION": "FETCH", "OPTION": option})
 
+        if not after:
+            # One-line, PII-free summary of the first response so a failed run is
+            # diagnosable from the log (keys + status only — never the log data).
+            meta = {k: v for k, v in fields.items()
+                    if k not in ("ADIF", "DATA")}
+            lens = {k: len(v) for k, v in fields.items() if k in ("ADIF", "DATA")}
+            print(f"fetch-qrz: first response keys={sorted(fields)} "
+                  f"meta={meta} datalen={lens}", file=sys.stderr)
+
         result = (fields.get("RESULT") or "").upper()
         if result != "OK":
             reason = (fields.get("REASON") or fields.get("STATUS") or "").strip()
