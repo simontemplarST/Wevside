@@ -1,0 +1,55 @@
+name: Refresh logbook from QRZ
+
+# Pulls the logbook straight from the QRZ Logbook API (server-side, so the API
+# key stays in a secret and the raw ADIF — which carries third-party PII — never
+# lands in git). Regenerates the sanitized data files and commits them only when
+# the log actually changes; that commit triggers the normal Pages deploy, so the
+# logbook rebuilds along with the site. A logbook changes slowly, so every 6 h is
+# plenty and keeps QRZ API calls modest.
+
+on:
+  schedule:
+    - cron: "23 */6 * * *"   # every 6 hours, offset off the top of the hour
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: qrz-logbook
+  cancel-in-progress: true
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fetch logbook from QRZ and regenerate site data
+        env:
+          QRZ_API_KEY: ${{ secrets.QRZ_API_KEY }}
+        run: |
+          if [ -z "$QRZ_API_KEY" ]; then
+            echo "QRZ_API_KEY secret not set — leaving committed logbook as-is."
+            exit 0
+          fi
+          set -e
+          python3 scripts/fetch-qrz.py -o qrz-logbook.adi
+          python3 scripts/import-adif.py qrz-logbook.adi -o data/log.yaml
+          python3 scripts/build-qso-map.py qrz-logbook.adi \
+            --home "${{ vars.HOME_GRID || 'EN33mq' }}" \
+            -o data/qso_map.json
+          rm -f qrz-logbook.adi   # never commit the raw export (PII)
+
+      - name: Commit only if the logbook changed
+        run: |
+          if [ -n "$(git status --porcelain data/log.yaml data/qso_map.json)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add data/log.yaml data/qso_map.json
+            git commit -m "Logbook: refresh from QRZ"
+            git push
+          else
+            echo "No logbook changes — nothing to commit."
+          fi

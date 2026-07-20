@@ -1,3 +1,15 @@
+# Scripts
+
+- **`fetch-qrz.py`** — downloads the full logbook from the QRZ Logbook API as ADIF
+  (`QRZ_API_KEY=xxxx python3 scripts/fetch-qrz.py -o log.adi`). Server-side only —
+  the key is a subscription credential and the API has no CORS. Pages through the log
+  with `AFTERLOGID`; writes a temp `.adi` that `import-adif.py` / `build-qso-map.py`
+  turn into the sanitized site data. See the repo README's *Logbook source* section.
+- **`import-adif.py`** — ADIF → `data/log.yaml` (scrubs emails/URLs/phones).
+- **`build-qso-map.py`** — ADIF → `data/qso_map.json` (positions + great-circle paths).
+- **`aprs-report.py`** — aprs.fi activity → `static/aprs.json` for the APRS badge.
+- **`on-air-light.py`** — PSKReporter spots → `on-air.json` for the ON AIR badge (below).
+
 # On-Air Light (PSKReporter)
 
 `on-air-light.py` polls the [PSKReporter](https://pskreporter.info/) retrieval

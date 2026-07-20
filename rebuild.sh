@@ -42,6 +42,22 @@ command -v python3 >/dev/null 2>&1 || die "python3 not found."
 hugo version | grep -q extended    || die "Hugo 'extended' is required (for SCSS/asset pipeline)."
 
 # --- 1. logbook data --------------------------------------------------------
+# Source order: a local ADIF file if present, else a live pull from QRZ when
+# QRZ_API_KEY is set (same source CI uses), else reuse the committed data.
+QRZ_TMP=""
+cleanup() { [[ -n "$QRZ_TMP" && -f "$QRZ_TMP" ]] && rm -f "$QRZ_TMP"; }
+trap cleanup EXIT
+
+if [[ ! -f "$ADIF" && -n "${QRZ_API_KEY:-}" ]]; then
+  say "Fetching logbook from QRZ API -> temporary ADIF"
+  QRZ_TMP="$(mktemp -t qrz-logbook.XXXXXX.adi)"
+  if python3 scripts/fetch-qrz.py -o "$QRZ_TMP"; then
+    ADIF="$QRZ_TMP"
+  else
+    die "QRZ fetch failed — set a valid QRZ_API_KEY or pass a local .adi path."
+  fi
+fi
+
 if [[ -f "$ADIF" ]]; then
   say "Importing logbook from $ADIF -> data/log.yaml"
   python3 scripts/import-adif.py "$ADIF" -o data/log.yaml
@@ -49,8 +65,8 @@ if [[ -f "$ADIF" ]]; then
   say "Building QSO map from $ADIF -> data/qso_map.json (home $HOME_GRID)"
   python3 scripts/build-qso-map.py "$ADIF" --home "$HOME_GRID"
 else
-  printf '\033[33m! ADIF "%s" not found — reusing existing data/log.yaml and data/qso_map.json.\033[0m\n' "$ADIF"
-  printf '  Pass a path (./rebuild.sh your-log.adi) to regenerate them.\n'
+  printf '\033[33m! No ADIF at "%s" and no QRZ_API_KEY — reusing existing data/log.yaml and data/qso_map.json.\033[0m\n' "$ADIF"
+  printf '  Pass a path (./rebuild.sh your-log.adi) or set QRZ_API_KEY to regenerate them.\n'
 fi
 
 # --- 2. static site ---------------------------------------------------------
