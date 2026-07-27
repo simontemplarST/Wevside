@@ -1,8 +1,8 @@
 {
   "callsign": "N0YEP",
   "active": true,
-  "last_heard": 1785156931,
-  "last_heard_iso": "2026-07-27T12:55:31+00:00",
+  "last_heard": 1785188403,
+  "last_heard_iso": "2026-07-27T21:40:03+00:00",
   "last_call": "N0YEP-7",
   "comment": "431.150MHz +000 D-STAR>N0YEP B omw 2",
   "count": 1,
@@ -10,6 +10,6 @@
     "N0YEP-7"
   ],
   "window_hours": 24,
-  "updated": 1785164094,
+  "updated": 1785190412,
   "error": null
 }
