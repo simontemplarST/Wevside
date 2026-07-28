@@ -1,8 +1,8 @@
 {
   "callsign": "N0YEP",
   "active": true,
-  "last_heard": 1785192511,
-  "last_heard_iso": "2026-07-27T22:48:31+00:00",
+  "last_heard": 1785244231,
+  "last_heard_iso": "2026-07-28T13:10:31+00:00",
   "last_call": "N0YEP-7",
   "comment": "146.520MHzomw 2 crz",
   "count": 1,
@@ -10,6 +10,6 @@
     "N0YEP-7"
   ],
   "window_hours": 24,
-  "updated": 1785209161,
+  "updated": 1785248942,
   "error": null
 }
